@@ -1,0 +1,7 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="400" height="400" fill="#F3F4F6"/>
+<rect x="100" y="100" width="200" height="140" rx="8" fill="#9CA3AF"/>
+<circle cx="150" cy="160" r="15" fill="#6B7280"/>
+<path d="M120 220L150 190L180 220L220 180L280 240V260H120V220Z" fill="#6B7280"/>
+<text x="200" y="320" font-family="Arial, sans-serif" font-size="18" fill="#637380" text-anchor="middle" font-weight="500">Event NFT</text>
+</svg>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi'
 import { Header } from '@/components/Header'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
@@ -36,7 +36,7 @@ const NFT_ABI = [
 ]
 
 export default function MintPage() {
-  const { address, isConnected } = useAccount()
+  const { address, isConnected, chain } = useAccount()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [image, setImage] = useState<File | null>(null)
@@ -49,6 +49,7 @@ export default function MintPage() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   })
+  const { switchChain } = useSwitchChain()
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -62,6 +63,17 @@ export default function MintPage() {
     if (!isConnected || !address || !image || !name || !location || !eventDate || !eventTime) {
       alert('Please connect wallet and fill all required fields')
       return
+    }
+
+    // Check if user is on the correct network
+    if (chain?.id !== baseSepolia.id) {
+      try {
+        await switchChain({ chainId: baseSepolia.id })
+      } catch (error) {
+        console.error('Failed to switch network:', error)
+        alert('Please switch to Base Sepolia network to mint NFTs')
+        return
+      }
     }
 
     setIsUploading(true)
@@ -90,7 +102,8 @@ export default function MintPage() {
       // Convert date and time to Unix timestamp
       const eventDateTime = new Date(`${eventDate}T${eventTime}`).getTime() / 1000
 
-      // Mint NFT
+      // Mint NFT with current timestamp
+      const currentTimestamp = Math.floor(Date.now() / 1000)
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
         abi: NFT_ABI,
@@ -104,6 +117,8 @@ export default function MintPage() {
       setIsUploading(false)
     }
   }
+
+  const isWrongNetwork = isConnected && chain?.id !== baseSepolia.id
 
   if (!isConnected) {
     return (
@@ -125,6 +140,26 @@ export default function MintPage() {
       <div className="max-w-2xl mx-auto pt-8 px-4">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Create Event NFT</h1>
         <p className="text-gray-600 mb-6">Create NFTs for tickets, reservations, and special events</p>
+        
+        {isWrongNetwork && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">Wrong Network</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Please switch to Base Sepolia network to mint NFTs
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => switchChain({ chainId: baseSepolia.id })}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                Switch Network
+              </button>
+            </div>
+          </div>
+        )}
         
         <form onSubmit={handleMint} className="space-y-6 bg-white p-6 rounded-lg shadow">
           <div>
@@ -185,39 +220,9 @@ export default function MintPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-2">
-                Event Date *
-              </label>
-              <input
-                type="date"
-                id="eventDate"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="eventTime" className="block text-sm font-medium text-gray-700 mb-2">
-                Event Time *
-              </label>
-              <input
-                type="time"
-                id="eventTime"
-                value={eventTime}
-                onChange={(e) => setEventTime(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-          </div>
-
           <button
             type="submit"
-            disabled={isPending || isConfirming || isUploading}
+            disabled={isPending || isConfirming || isUploading || isWrongNetwork}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isUploading
