@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { Header } from '@/components/Header'
 import { NFTCard } from '@/components/NFTCard'
+import { CONTRACT_ADDRESSES } from '@/lib/config'
+import { baseSepolia } from 'viem/chains'
+import MARKETPLACE_ABI from '@/lib/Marketplace.json'
+import NFT_ABI from '@/lib/BaseNFT.json'
 
 interface NFT {
   id: string
@@ -13,6 +17,9 @@ interface NFT {
   image: string
   owner: string
   creator: string
+  consumed: boolean
+  location: string
+  datetime: number
   price?: string
   saleId?: string
   endTime?: number
@@ -22,6 +29,49 @@ export default function MyNFTsPage() {
   const { address, isConnected } = useAccount()
   const [nfts, setNfts] = useState<NFT[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null)
+  const [listPriceUsd, setListPriceUsd] = useState<string>('')
+  const [buyNowPriceUsd, setBuyNowPriceUsd] = useState<string>('')
+  const [duration, setDuration] = useState<string>('86400')
+  const [isApproving, setIsApproving] = useState(false)
+  const [needsApproval, setNeedsApproval] = useState(false)
+  const [showListingModal, setShowListingModal] = useState(false)
+
+  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  })
+
+  // Check if marketplace is approved for the selected NFT
+  const { data: approvedAddress } = useReadContract({
+    address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
+    abi: NFT_ABI,
+    functionName: 'getApproved',
+    args: selectedNFT ? [BigInt(selectedNFT.tokenId)] : undefined,
+    query: {
+      enabled: !!selectedNFT,
+    },
+  })
+
+  useEffect(() => {
+    if (selectedNFT && approvedAddress !== undefined) {
+      const marketplaceAddress = CONTRACT_ADDRESSES[baseSepolia.id].marketplace.toLowerCase()
+      const approved = (approvedAddress as string).toLowerCase()
+      setNeedsApproval(approved !== marketplaceAddress)
+    }
+  }, [selectedNFT, approvedAddress])
+
+  useEffect(() => {
+    if (isSuccess) {
+      setSelectedNFT(null)
+      setListPriceUsd('')
+      setBuyNowPriceUsd('')
+      setIsApproving(false)
+      setNeedsApproval(false)
+      setShowListingModal(false)
+      fetchMyNFTs() // Refresh the list
+    }
+  }, [isSuccess])
 
   useEffect(() => {
     if (isConnected && address) {
@@ -45,6 +95,54 @@ export default function MyNFTsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleListNFT = (nft: NFT) => {
+    setSelectedNFT(nft)
+    setShowListingModal(true)
+  }
+
+  const handleApprove = async () => {
+    if (!selectedNFT) return
+    
+    setIsApproving(true)
+    try {
+      writeContract({
+        address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
+        abi: NFT_ABI,
+        functionName: 'approve',
+        args: [CONTRACT_ADDRESSES[baseSepolia.id].marketplace, BigInt(selectedNFT.tokenId)],
+      })
+    } catch (error) {
+      console.error('Error approving:', error)
+      setIsApproving(false)
+    }
+  }
+
+  const handleSubmitListing = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!selectedNFT || !listPriceUsd || !buyNowPriceUsd || !duration) {
+      alert('Please fill all fields')
+      return
+    }
+
+    if (needsApproval) {
+      alert('Please approve the marketplace to transfer your NFT first')
+      return
+    }
+
+    // Convert USD to 8 decimals (e.g., $50.00 -> 5000000000)
+    const listPriceUsdBigInt = BigInt(Math.floor(parseFloat(listPriceUsd) * 100000000))
+    const buyNowPriceUsdBigInt = BigInt(Math.floor(parseFloat(buyNowPriceUsd) * 100000000))
+    const durationBigInt = BigInt(duration)
+
+    writeContract({
+      address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`,
+      abi: MARKETPLACE_ABI,
+      functionName: 'listNFT',
+      args: [BigInt(selectedNFT.tokenId), listPriceUsdBigInt, buyNowPriceUsdBigInt, durationBigInt],
+    })
   }
 
   if (!isConnected) {
@@ -117,8 +215,126 @@ export default function MyNFTsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {nfts.map((nft) => (
-              <NFTCard key={nft.id} nft={nft} />
+              <div key={nft.id} className="relative">
+                <NFTCard nft={nft} />
+                {!nft.consumed && (
+                  <button
+                    onClick={() => handleListNFT(nft)}
+                    className="absolute top-4 left-4 bg-[var(--primary)] text-[var(--on-primary)] px-3 py-1 rounded-full text-xs font-medium hover:bg-[var(--primary)]/90 transition-colors z-10"
+                  >
+                    List for Sale
+                  </button>
+                )}
+              </div>
             ))}
+          </div>
+        )}
+
+        {/* Listing Modal */}
+        {showListingModal && selectedNFT && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-[var(--on-surface)] mb-4">
+                List NFT #{selectedNFT.tokenId}
+              </h3>
+              
+              <form onSubmit={handleSubmitListing} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                    Starting Price (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={listPriceUsd}
+                    onChange={(e) => setListPriceUsd(e.target.value)}
+                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                    placeholder="50.00"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                    Buy Now Price (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={buyNowPriceUsd}
+                    onChange={(e) => setBuyNowPriceUsd(e.target.value)}
+                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                    placeholder="100.00"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                    Duration *
+                  </label>
+                  <select
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                  >
+                    <option value="3600">1 hour</option>
+                    <option value="86400">24 hours</option>
+                    <option value="259200">3 days</option>
+                    <option value="604800">7 days</option>
+                  </select>
+                </div>
+
+                {needsApproval && (
+                  <div className="space-y-3">
+                    <div className="bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)] p-4">
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-5 h-5 text-[var(--warning)]" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-sm text-[var(--warning)] font-medium">
+                          Approval Required
+                        </p>
+                      </div>
+                      <p className="text-xs text-[var(--on-surface-variant)] mt-1">
+                        You need to approve the marketplace to transfer your NFT before listing it.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApprove}
+                      disabled={isApproving || isPending || isConfirming}
+                      className="w-full bg-[var(--warning)] text-white py-3 rounded-[var(--radius-sm)] font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--warning)]/90 transition-colors"
+                    >
+                      {isApproving ? 'Approving...' : 'Approve Marketplace'}
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowListingModal(false)}
+                    className="flex-1 py-3 px-4 border border-[var(--surface-variant)] rounded-[var(--radius-sm)] text-[var(--on-surface)] hover:bg-[var(--surface-variant)] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isPending || isConfirming || needsApproval}
+                    className="flex-1 btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPending ? 'Confirming...' : isConfirming ? 'Listing...' : 'List NFT'}
+                  </button>
+                </div>
+
+                {isSuccess && (
+                  <div className="text-center p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
+                    <p className="text-[var(--success)] font-medium">NFT listed successfully!</p>
+                  </div>
+                )}
+              </form>
+            </div>
           </div>
         )}
       </main>

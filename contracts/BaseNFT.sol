@@ -8,12 +8,15 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
     uint256 private _tokenIdCounter;
     
+    enum EventType { SPORTS, MUSIC, FOOD, OTHERS }
+    
     struct NFTData {
         string picture;        // URL to the picture
         string location;       // Event/NFT location
         uint256 datetime;      // Unix timestamp of event
         bool consumed;         // Whether NFT has been consumed
         address originalOwner; // Who originally minted it
+        EventType eventType;   // Type of event (sports, music, food, others)
     }
     
     mapping(uint256 => NFTData) public nftData;
@@ -23,7 +26,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
         address indexed owner,
         string picture,
         string location,
-        uint256 datetime
+        uint256 datetime,
+        EventType eventType
     );
     
     event NFTConsumed(
@@ -40,7 +44,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
     function mint(
         string memory picture,
         string memory location,
-        uint256 datetime
+        uint256 datetime,
+        EventType eventType
     ) public nonReentrant returns (uint256) {
         require(bytes(picture).length > 0, "Picture URL cannot be empty");
         require(bytes(location).length > 0, "Location cannot be empty");
@@ -56,10 +61,11 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
             location: location,
             datetime: datetime,
             consumed: false,
-            originalOwner: msg.sender
+            originalOwner: msg.sender,
+            eventType: eventType
         });
         
-        emit NFTMinted(tokenId, msg.sender, picture, location, datetime);
+        emit NFTMinted(tokenId, msg.sender, picture, location, datetime, eventType);
         
         return tokenId;
     }
@@ -83,7 +89,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
         uint256 datetime,
         bool consumed,
         address originalOwner,
-        address currentOwner
+        address currentOwner,
+        EventType eventType
     ) {
         require(_exists(tokenId), "Token does not exist");
         NFTData memory data = nftData[tokenId];
@@ -93,7 +100,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
             data.datetime,
             data.consumed,
             data.originalOwner,
-            ownerOf(tokenId)
+            ownerOf(tokenId),
+            data.eventType
         );
     }
     

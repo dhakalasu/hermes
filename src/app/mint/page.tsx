@@ -11,7 +11,8 @@ const NFT_ABI = [
     "inputs": [
       { "internalType": "string", "name": "picture", "type": "string" },
       { "internalType": "string", "name": "location", "type": "string" },
-      { "internalType": "uint256", "name": "datetime", "type": "uint256" }
+      { "internalType": "uint256", "name": "datetime", "type": "uint256" },
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
     ],
     "name": "mint",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -35,12 +36,22 @@ const NFT_ABI = [
   }
 ]
 
+type EventType = 'sports' | 'music' | 'food' | 'others'
+
+const eventTypeOptions = [
+  { value: 'sports', label: 'Sports', icon: '⚽', examples: 'Stadium, Arena, Court' },
+  { value: 'music', label: 'Music & Entertainment', icon: '🎵', examples: 'Concert Hall, Club, Festival' },
+  { value: 'food', label: 'Food & Dining', icon: '🍽️', examples: 'Restaurant, Cafe, Bar' },
+  { value: 'others', label: 'Other Events', icon: '✨', examples: 'Conference, Workshop, Meetup' },
+]
+
 export default function MintPage() {
   const { address, isConnected, chain } = useAccount()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [location, setLocation] = useState('')
+  const [eventType, setEventType] = useState<EventType>('others')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
   const [isUploading, setIsUploading] = useState(false)
@@ -58,7 +69,7 @@ export default function MintPage() {
   const handleMint = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!isConnected || !address || !imageUrl || !name || !location || !eventDate || !eventTime) {
+    if (!isConnected || !address || !imageUrl || !name || !location || !eventType || !eventDate || !eventTime) {
       alert('Please connect wallet and fill all required fields')
       return
     }
@@ -102,12 +113,21 @@ export default function MintPage() {
       // Convert date and time to Unix timestamp
       const eventDateTime = new Date(`${eventDate}T${eventTime}`).getTime() / 1000
 
-      // Mint NFT
+      // Convert event type to enum value (SPORTS: 0, MUSIC: 1, FOOD: 2, OTHERS: 3)
+      const eventTypeToEnum = {
+        'sports': 0,
+        'music': 1,
+        'food': 2,
+        'others': 3
+      }
+      const eventTypeEnum = eventTypeToEnum[eventType]
+
+      // Mint NFT with event type
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
         abi: NFT_ABI,
         functionName: 'mint',
-        args: [pictureUrl, location, BigInt(Math.floor(eventDateTime))],
+        args: [pictureUrl, location, BigInt(Math.floor(eventDateTime)), eventTypeEnum],
       })
     } catch (error) {
       console.error('Error minting NFT:', error)
@@ -220,6 +240,37 @@ export default function MintPage() {
           </div>
 
           <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+              Event Type *
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {eventTypeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setEventType(option.value as EventType)}
+                  className={`p-4 rounded-[var(--radius-md)] border-2 transition-all text-left ${
+                    eventType === option.value
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/10'
+                      : 'border-[var(--surface-variant)] hover:border-[var(--primary)]/50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <span className="text-2xl">{option.icon}</span>
+                    <span className="font-medium text-[var(--on-surface)]">{option.label}</span>
+                    {eventType === option.value && (
+                      <svg className="w-5 h-5 text-[var(--primary)] ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <p className="text-sm text-[var(--on-surface-variant)]">{option.examples}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <label htmlFor="location" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
               Event Location *
             </label>
@@ -229,7 +280,7 @@ export default function MintPage() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-              placeholder="Enter event location"
+              placeholder={`Enter ${eventTypeOptions.find(opt => opt.value === eventType)?.examples.split(',')[0].toLowerCase()} name`}
               required
             />
           </div>

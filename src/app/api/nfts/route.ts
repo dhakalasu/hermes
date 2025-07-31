@@ -32,7 +32,9 @@ const NFT_ABI = [
       { "internalType": "string", "name": "location", "type": "string" },
       { "internalType": "uint256", "name": "datetime", "type": "uint256" },
       { "internalType": "bool", "name": "consumed", "type": "bool" },
-      { "internalType": "address", "name": "originalOwner", "type": "address" }
+      { "internalType": "address", "name": "originalOwner", "type": "address" },
+      { "internalType": "address", "name": "currentOwner", "type": "address" },
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -59,7 +61,11 @@ async function fetchNFTFromBlockchain(tokenId: number) {
       }),
     ])
 
-    const [picture, location, datetime, consumed, originalOwner] = nftData
+    const [picture, location, datetime, consumed, originalOwner, currentOwner, eventType] = nftData
+    
+    // Convert eventType enum to string
+    const eventTypeNames = ['sports', 'music', 'food', 'others']
+    const eventTypeName = eventTypeNames[Number(eventType)] || 'others'
     
     // Validate and sanitize image URL
     const imageUrl = getValidImageUrl(picture)
@@ -70,11 +76,12 @@ async function fetchNFTFromBlockchain(tokenId: number) {
       name: `Event at ${location}`,
       description: `Event ticket for ${location} - ${new Date(Number(datetime) * 1000).toLocaleDateString()}`,
       image: imageUrl,
-      owner: owner.toLowerCase(),
+      owner: currentOwner.toLowerCase(),
       creator: originalOwner.toLowerCase(),
       consumed,
       location,
       datetime: Number(datetime),
+      eventType: eventTypeName,
     }
   } catch (error) {
     console.error(`Error fetching NFT ${tokenId}:`, error)

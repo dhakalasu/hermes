@@ -16,9 +16,26 @@ interface NFT {
   consumed: boolean
   location: string
   datetime: number
+  eventType: string
   price?: string
   saleId?: string
   endTime?: number
+}
+
+type EventType = 'sports' | 'music' | 'food' | 'others'
+
+// Function to get event type directly from NFT data
+const getEventType = (nft: NFT): EventType => {
+  return nft.eventType as EventType || 'others'
+}
+
+const getEventTypeEmoji = (eventType: EventType): string => {
+  switch (eventType) {
+    case 'sports': return '⚽'
+    case 'music': return '🎵'
+    case 'food': return '🍽️'
+    case 'others': return '✨'
+  }
 }
 
 interface NFTCardProps {
@@ -27,6 +44,8 @@ interface NFTCardProps {
 
 export function NFTCard({ nft }: NFTCardProps) {
   const isOnSale = nft.saleId && nft.endTime && Date.now() < nft.endTime * 1000
+  const eventType = getEventType(nft)
+  const eventEmoji = getEventTypeEmoji(eventType)
   
   const formatTimeLeft = (timeLeft: number) => {
     const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24))
@@ -51,7 +70,7 @@ export function NFTCard({ nft }: NFTCardProps) {
               height={400}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
-                e.currentTarget.src = '/placeholder-image.png'
+                // e.currentTarget.src = '/placeholder-image.png'
               }}
             />
           </div>
@@ -61,6 +80,12 @@ export function NFTCard({ nft }: NFTCardProps) {
               Used
             </div>
           )}
+          
+          {/* Event Type Badge */}
+          <div className="absolute top-3 left-3 px-2 py-1 bg-black/70 text-white text-xs font-medium rounded-full flex items-center space-x-1">
+            <span>{eventEmoji}</span>
+            <span className="capitalize">{eventType}</span>
+          </div>
         </div>
         
         <div className="p-4 space-y-3">
