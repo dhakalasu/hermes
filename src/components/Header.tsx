@@ -18,6 +18,9 @@ export function Header() {
             <Link href="/" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
               Explore
             </Link>
+            <Link href="/marketplace" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
+              Marketplace
+            </Link>
             <Link href="/mint" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
               Create
             </Link>

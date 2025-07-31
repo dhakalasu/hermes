@@ -9,10 +9,10 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
     uint256 private _tokenIdCounter;
     
     struct NFTData {
-        string picture;      // URL to the picture
-        string location;     // Event/NFT location
-        uint256 datetime;    // Unix timestamp of event
-        bool consumed;       // Whether NFT has been consumed
+        string picture;        // URL to the picture
+        string location;       // Event/NFT location
+        uint256 datetime;      // Unix timestamp of event
+        bool consumed;         // Whether NFT has been consumed
         address originalOwner; // Who originally minted it
     }
     
@@ -68,8 +68,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
         require(_exists(tokenId), "Token does not exist");
         require(!nftData[tokenId].consumed, "Token already consumed");
         require(
-            msg.sender == nftData[tokenId].originalOwner,
-            "Only original owner can consume this NFT"
+            msg.sender == ownerOf(tokenId),
+            "Only current owner can consume this NFT"
         );
         
         nftData[tokenId].consumed = true;
@@ -82,7 +82,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
         string memory location,
         uint256 datetime,
         bool consumed,
-        address originalOwner
+        address originalOwner,
+        address currentOwner
     ) {
         require(_exists(tokenId), "Token does not exist");
         NFTData memory data = nftData[tokenId];
@@ -91,8 +92,14 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
             data.location,
             data.datetime,
             data.consumed,
-            data.originalOwner
+            data.originalOwner,
+            ownerOf(tokenId)
         );
+    }
+    
+    function isConsumed(uint256 tokenId) public view returns (bool) {
+        require(_exists(tokenId), "Token does not exist");
+        return nftData[tokenId].consumed;
     }
     
     function totalSupply() public view returns (uint256) {

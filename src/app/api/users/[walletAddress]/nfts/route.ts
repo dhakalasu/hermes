@@ -83,10 +83,11 @@ async function fetchNFTData(tokenId: number) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { walletAddress: string } }
+  { params }: { params: Promise<{ walletAddress: string }> }
 ) {
   try {
-    const walletAddress = params.walletAddress.toLowerCase()
+    const { walletAddress } = await params
+    const address = walletAddress.toLowerCase()
     const contractAddress = CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`
     
     // Get total supply of NFTs
@@ -112,7 +113,7 @@ export async function GET(
           args: [BigInt(tokenId)],
         })
         
-        if (owner.toLowerCase() === walletAddress) {
+        if (owner.toLowerCase() === address) {
           const nftData = await fetchNFTData(tokenId)
           if (nftData) {
             userNFTs.push(nftData)
