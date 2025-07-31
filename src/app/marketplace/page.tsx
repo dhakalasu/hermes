@@ -36,11 +36,32 @@ export default function MarketplacePage() {
   const [listPriceUsd, setListPriceUsd] = useState<string>('')
   const [buyNowPriceUsd, setBuyNowPriceUsd] = useState<string>('')
   const [duration, setDuration] = useState<string>('86400') // 24 hours default
+  const [isApproving, setIsApproving] = useState(false)
+  const [needsApproval, setNeedsApproval] = useState(false)
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   })
+
+  // Check if marketplace is approved for the selected token
+  const { data: approvedAddress } = useReadContract({
+    address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
+    abi: NFT_ABI,
+    functionName: 'getApproved',
+    args: selectedTokenId ? [BigInt(selectedTokenId)] : undefined,
+    query: {
+      enabled: !!selectedTokenId,
+    },
+  })
+
+  useEffect(() => {
+    if (selectedTokenId && approvedAddress !== undefined) {
+      const marketplaceAddress = CONTRACT_ADDRESSES[baseSepolia.id].marketplace.toLowerCase()
+      const approved = (approvedAddress as string).toLowerCase()
+      setNeedsApproval(approved !== marketplaceAddress)
+    }
+  }, [selectedTokenId, approvedAddress])
 
   // Read user's NFTs for listing
   const { data: userNFTs, refetch: refetchUserNFTs } = useReadContract({
@@ -59,6 +80,8 @@ export default function MarketplacePage() {
       setSelectedTokenId('')
       setListPriceUsd('')
       setBuyNowPriceUsd('')
+      setIsApproving(false)
+      setNeedsApproval(false)
     }
   }, [isSuccess, refetchUserNFTs])
 
@@ -94,6 +117,23 @@ export default function MarketplacePage() {
     }
   }
 
+  const handleApprove = async () => {
+    if (!selectedTokenId) return
+    
+    setIsApproving(true)
+    try {
+      writeContract({
+        address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
+        abi: NFT_ABI,
+        functionName: 'approve',
+        args: [CONTRACT_ADDRESSES[baseSepolia.id].marketplace, BigInt(selectedTokenId)],
+      })
+    } catch (error) {
+      console.error('Error approving:', error)
+      setIsApproving(false)
+    }
+  }
+
   const handleListNFT = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -104,6 +144,11 @@ export default function MarketplacePage() {
     
     if (!selectedTokenId || !listPriceUsd || !buyNowPriceUsd || !duration) {
       alert('Please fill all fields')
+      return
+    }
+
+    if (needsApproval) {
+      alert('Please approve the marketplace to transfer your NFT first')
       return
     }
 
@@ -226,9 +271,35 @@ export default function MarketplacePage() {
               </div>
             </div>
 
+            {selectedTokenId && needsApproval && (
+              <div className="space-y-3">
+                <div className="bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)] p-4">
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5 text-[var(--warning)]" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-[var(--warning)] font-medium">
+                      Approval Required
+                    </p>
+                  </div>
+                  <p className="text-xs text-[var(--on-surface-variant)] mt-1">
+                    You need to approve the marketplace to transfer your NFT before listing it.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={isApproving || isPending || isConfirming}
+                  className="w-full bg-[var(--warning)] text-white py-4 rounded-[var(--radius-sm)] font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--warning)]/90 transition-colors"
+                >
+                  {isApproving ? 'Approving...' : 'Approve Marketplace'}
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isPending || isConfirming}
+              disabled={isPending || isConfirming || needsApproval}
               className="w-full btn-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPending ? 'Confirming...' : isConfirming ? 'Listing...' : 'List NFT'}

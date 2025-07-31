@@ -21,8 +21,8 @@ export const SUPPORTED_CHAINS = [base, baseSepolia]
 
 export const CONTRACT_ADDRESSES = {
   [baseSepolia.id]: {
-    nft: '0xe4cD58ab60a36cE4904A9Fd743241BB1e021859A',
-    marketplace: '0x083D46A7Ed5591c5E55fc76b031b061f8dBED2B4',
+    nft: '0x20558EeCb59EB2090A5A0588FD5fD18BF95f2A1d',
+    marketplace: '0x8EDf3fce78d843b544Cc596e64c6108b434dE154',
   },
   [base.id]: {
     nft: process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS || '',

@@ -3,30 +3,38 @@ import { NextRequest, NextResponse } from 'next/server'
 // Simple in-memory storage for demo (in production, use IPFS/database)
 const metadataStore = new Map<string, unknown>()
 
+// Function to validate if URL is a valid image
+async function validateImageUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' })
+    const contentType = response.headers.get('content-type')
+    return response.ok && contentType?.startsWith('image/') === true
+  } catch {
+    return false
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const image = formData.get('image') as File
-    const name = formData.get('name') as string
-    const description = formData.get('description') as string
-    const location = formData.get('location') as string
-    const eventDate = formData.get('eventDate') as string
-    const eventTime = formData.get('eventTime') as string
+    const body = await request.json()
+    const { imageUrl, name, description, location, eventDate, eventTime } = body
 
-    if (!image || !name || !location || !eventDate || !eventTime) {
+    if (!imageUrl || !name || !location || !eventDate || !eventTime) {
       return NextResponse.json(
-        { error: 'Image, name, location, event date, and event time are required' },
+        { error: 'Image URL, name, location, event date, and event time are required' },
         { status: 400 }
       )
     }
 
-    // In a real app, you would upload to IPFS here
-    // For demo purposes, we'll create a mock IPFS hash for the image
-    const imageHash = `Qm${Math.random().toString(36).substring(2, 15)}`
-    const metadataHash = `Qm${Math.random().toString(36).substring(2, 15)}`
+    // Validate the image URL
+    const isValidImage = await validateImageUrl(imageUrl)
     
-    // Direct image URL for the smart contract
-    const pictureUrl = `https://ipfs.io/ipfs/${imageHash}`
+    // Use provided URL if valid, otherwise use a random placeholder
+    const pictureUrl = isValidImage 
+      ? imageUrl 
+      : `https://picsum.photos/400/300?random=${Math.floor(Math.random() * 1000)}`
+    
+    const metadataHash = `Qm${Math.random().toString(36).substring(2, 15)}`
     
     const metadata = {
       name,
@@ -62,12 +70,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       pictureUrl,
       metadata,
-      metadataUri: `https://ipfs.io/ipfs/${metadataHash}`
+      metadataUri: `https://api.example.com/metadata/${metadataHash}`,
+      isOriginalUrl: isValidImage
     })
   } catch (error) {
-    console.error('Error uploading metadata:', error)
+    console.error('Error processing metadata:', error)
     return NextResponse.json(
-      { error: 'Failed to upload metadata' },
+      { error: 'Failed to process metadata' },
       { status: 500 }
     )
   }

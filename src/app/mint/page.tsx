@@ -39,7 +39,7 @@ export default function MintPage() {
   const { address, isConnected, chain } = useAccount()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [image, setImage] = useState<File | null>(null)
+  const [imageUrl, setImageUrl] = useState('')
   const [location, setLocation] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
@@ -51,16 +51,14 @@ export default function MintPage() {
   })
   const { switchChain } = useSwitchChain()
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setImage(e.target.files[0])
-    }
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUrl(e.target.value)
   }
 
   const handleMint = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!isConnected || !address || !image || !name || !location || !eventDate || !eventTime) {
+    if (!isConnected || !address || !imageUrl || !name || !location || !eventDate || !eventTime) {
       alert('Please connect wallet and fill all required fields')
       return
     }
@@ -79,22 +77,24 @@ export default function MintPage() {
     setIsUploading(true)
     
     try {
-      // Upload to IPFS via backend API
-      const formData = new FormData()
-      formData.append('image', image)
-      formData.append('name', name)
-      formData.append('description', description)
-      formData.append('location', location)
-      formData.append('eventDate', eventDate)
-      formData.append('eventTime', eventTime)
-
+      // Validate image URL via backend API
       const response = await fetch('/api/upload-metadata', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageUrl,
+          name,
+          description,
+          location,
+          eventDate,
+          eventTime,
+        }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to upload metadata')
+        throw new Error('Failed to validate image URL')
       }
 
       const { pictureUrl } = await response.json()
@@ -102,8 +102,7 @@ export default function MintPage() {
       // Convert date and time to Unix timestamp
       const eventDateTime = new Date(`${eventDate}T${eventTime}`).getTime() / 1000
 
-      // Mint NFT with current timestamp
-      const currentTimestamp = Math.floor(Date.now() / 1000)
+      // Mint NFT
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
         abi: NFT_ABI,
@@ -165,17 +164,30 @@ export default function MintPage() {
         
         <form onSubmit={handleMint} className="card space-y-6">
           <div className="space-y-2">
-            <label htmlFor="image" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
-              Event Image *
+            <label htmlFor="imageUrl" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+              Event Image URL *
             </label>
             <input
-              type="file"
-              id="image"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="block w-full text-sm text-[var(--on-surface-variant)] file:mr-4 file:py-3 file:px-4 file:rounded-[var(--radius-sm)] file:border-0 file:text-sm file:font-medium file:bg-[var(--surface-container)] file:text-[var(--primary)] hover:file:bg-[var(--surface-container-high)] transition-colors"
+              type="url"
+              id="imageUrl"
+              value={imageUrl}
+              onChange={handleImageUrlChange}
+              className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+              placeholder="https://example.com/image.jpg"
               required
             />
+            {imageUrl && (
+              <div className="mt-3">
+                <img 
+                  src={imageUrl}
+                  alt="Preview"
+                  className="w-full max-w-sm h-48 object-cover rounded-[var(--radius-md)] border border-[var(--surface-variant)]"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://picsum.photos/400/300?random=${Math.floor(Math.random() * 1000)}`
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
