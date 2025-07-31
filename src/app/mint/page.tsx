@@ -222,6 +222,36 @@ export default function MintPage() {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="eventDate" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                Event Date *
+              </label>
+              <input
+                type="date"
+                id="eventDate"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="eventTime" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                Event Time *
+              </label>
+              <input
+                type="time"
+                id="eventTime"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
+                className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                required
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isPending || isConfirming || isUploading || isWrongNetwork}
