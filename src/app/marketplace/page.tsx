@@ -10,22 +10,35 @@ import NFT_ABI from '@/lib/BaseNFT.json'
 
 interface Sale {
   seller: string
-  tokenId: bigint
-  listPriceUsd: bigint
-  buyNowPriceUsd: bigint
-  currentBidUsd: bigint
+  tokenId: string
+  listPriceUsd: string
+  buyNowPriceUsd: string
+  currentBidUsd: string
   currentBidder: string
-  endTime: bigint
+  endTime: string
   active: boolean
 }
 
 interface NFTData {
   picture: string
   location: string
-  datetime: bigint
+  datetime: string
   consumed: boolean
   originalOwner: string
   currentOwner: string
+}
+
+interface UserNFT {
+  id: string
+  tokenId: string
+  name: string
+  description: string
+  image: string
+  owner: string
+  creator: string
+  consumed: boolean
+  location: string
+  datetime: number
 }
 
 export default function MarketplacePage() {
@@ -38,6 +51,8 @@ export default function MarketplacePage() {
   const [duration, setDuration] = useState<string>('86400') // 24 hours default
   const [isApproving, setIsApproving] = useState(false)
   const [needsApproval, setNeedsApproval] = useState(false)
+  const [userNFTs, setUserNFTs] = useState<UserNFT[]>([])
+  const [loadingUserNFTs, setLoadingUserNFTs] = useState(false)
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -63,8 +78,8 @@ export default function MarketplacePage() {
     }
   }, [selectedTokenId, approvedAddress])
 
-  // Read user's NFTs for listing
-  const { data: userNFTs, refetch: refetchUserNFTs } = useReadContract({
+  // Read user's NFT balance for listing
+  const { data: userNFTBalance, refetch: refetchUserNFTs } = useReadContract({
     address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
     abi: NFT_ABI,
     functionName: 'balanceOf',
@@ -77,41 +92,57 @@ export default function MarketplacePage() {
   useEffect(() => {
     if (isSuccess) {
       refetchUserNFTs()
+      fetchUserNFTs()
+      fetchSales() // Refresh sales to show newly listed NFT
       setSelectedTokenId('')
       setListPriceUsd('')
       setBuyNowPriceUsd('')
       setIsApproving(false)
       setNeedsApproval(false)
     }
-  }, [isSuccess, refetchUserNFTs])
+  }, [isSuccess])
 
   useEffect(() => {
     fetchSales()
   }, [])
 
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchUserNFTs()
+    }
+  }, [isConnected, address])
+
+  const fetchUserNFTs = async () => {
+    if (!address) return
+    
+    try {
+      setLoadingUserNFTs(true)
+      const response = await fetch(`/api/users/${address}/nfts`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserNFTs(data.nfts || [])
+      }
+    } catch (error) {
+      console.error('Error fetching user NFTs:', error)
+    } finally {
+      setLoadingUserNFTs(false)
+    }
+  }
+
   const fetchSales = async () => {
     try {
       setLoading(true)
-      // For now, we'll check sales 1-10. In production, you'd track nextSaleId
-      const salesData = []
-      
-      for (let saleId = 1; saleId <= 10; saleId++) {
-        try {
-          const response = await fetch(`/api/marketplace/sales/${saleId}`)
-          if (response.ok) {
-            const data = await response.json()
-            if (data.sale.active) {
-              salesData.push({ saleId, ...data })
-            }
-          }
-        } catch (error) {
-          // Sale doesn't exist, continue
-        }
+      const response = await fetch('/api/marketplace/sales')
+      if (response.ok) {
+        const data = await response.json()
+        setSales(data.sales || [])
+      } else {
+        console.error('Failed to fetch sales:', response.statusText)
+        setSales([])
       }
-      
-      setSales(salesData)
     } catch (error) {
       console.error('Error fetching sales:', error)
+      setSales([])
     } finally {
       setLoading(false)
     }
@@ -165,12 +196,14 @@ export default function MarketplacePage() {
     })
   }
 
-  const formatUsdPrice = (priceUsd: bigint) => {
-    return `$${(Number(priceUsd) / 100000000).toFixed(2)}`
+  const formatUsdPrice = (priceUsd: bigint | string) => {
+    const price = typeof priceUsd === 'string' ? BigInt(priceUsd) : priceUsd
+    return `$${(Number(price) / 100000000).toFixed(2)}`
   }
 
-  const formatTimeLeft = (endTime: bigint) => {
-    const endTimeMs = Number(endTime) * 1000
+  const formatTimeLeft = (endTime: bigint | string) => {
+    const time = typeof endTime === 'string' ? BigInt(endTime) : endTime
+    const endTimeMs = Number(time) * 1000
     const timeLeft = Math.max(0, endTimeMs - Date.now())
     const hours = Math.floor(timeLeft / (1000 * 60 * 60))
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
@@ -208,68 +241,116 @@ export default function MarketplacePage() {
         {/* List NFT Section */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-[var(--on-surface)] mb-6">List Your NFT</h2>
-          <form onSubmit={handleListNFT} className="card max-w-2xl space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
-                  Token ID *
-                </label>
-                <input
-                  type="number"
-                  value={selectedTokenId}
-                  onChange={(e) => setSelectedTokenId(e.target.value)}
-                  className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-                  placeholder="Enter token ID"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
-                  Duration (seconds) *
-                </label>
-                <select
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-                >
-                  <option value="3600">1 hour</option>
-                  <option value="86400">24 hours</option>
-                  <option value="259200">3 days</option>
-                  <option value="604800">7 days</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
-                  Starting Price (USD) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={listPriceUsd}
-                  onChange={(e) => setListPriceUsd(e.target.value)}
-                  className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-                  placeholder="50.00"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
-                  Buy Now Price (USD) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={buyNowPriceUsd}
-                  onChange={(e) => setBuyNowPriceUsd(e.target.value)}
-                  className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-                  placeholder="100.00"
-                  required
-                />
-              </div>
+          <div className="card max-w-5xl space-y-6">
+            {/* NFT Selection */}
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-[var(--on-surface)]">
+                Select NFT to List *
+              </label>
+              
+              {loadingUserNFTs ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-[var(--surface-variant)] border-t-[var(--primary)]"></div>
+                </div>
+              ) : userNFTs.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-[var(--surface-variant)] rounded-[var(--radius-md)]">
+                  <p className="text-[var(--on-surface-variant)]">You don't own any NFTs to list</p>
+                  <a href="/mint" className="text-[var(--primary)] hover:underline mt-2 inline-block">
+                    Create your first NFT
+                  </a>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {userNFTs.map((nft) => (
+                    <div
+                      key={nft.tokenId}
+                      onClick={() => setSelectedTokenId(nft.tokenId)}
+                      className={`cursor-pointer border-2 rounded-[var(--radius-md)] p-3 transition-all ${
+                        selectedTokenId === nft.tokenId
+                          ? 'border-[var(--primary)] bg-[var(--primary)]/10'
+                          : 'border-[var(--surface-variant)] hover:border-[var(--primary)]/50'
+                      }`}
+                    >
+                      <div className="aspect-square relative mb-2 overflow-hidden rounded-[var(--radius-sm)]">
+                        <img
+                          src={nft.image}
+                          alt={nft.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder-image.png'
+                          }}
+                        />
+                        {nft.consumed && (
+                          <div className="absolute top-2 right-2 bg-[var(--error)] text-white px-2 py-1 rounded text-xs">
+                            Used
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm text-[var(--on-surface)] truncate">
+                          {nft.name}
+                        </h4>
+                        <p className="text-xs text-[var(--on-surface-variant)] truncate">
+                          Token #{nft.tokenId}
+                        </p>
+                        <p className="text-xs text-[var(--on-surface-variant)] truncate">
+                          {nft.location}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            <form onSubmit={handleListNFT} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                    Duration *
+                  </label>
+                  <select
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                  >
+                    <option value="3600">1 hour</option>
+                    <option value="86400">24 hours</option>
+                    <option value="259200">3 days</option>
+                    <option value="604800">7 days</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                    Starting Price (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={listPriceUsd}
+                    onChange={(e) => setListPriceUsd(e.target.value)}
+                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                    placeholder="50.00"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                    Buy Now Price (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={buyNowPriceUsd}
+                    onChange={(e) => setBuyNowPriceUsd(e.target.value)}
+                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                    placeholder="100.00"
+                    required
+                  />
+                </div>
+              </div>
 
             {selectedTokenId && needsApproval && (
               <div className="space-y-3">
@@ -297,20 +378,21 @@ export default function MarketplacePage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isPending || isConfirming || needsApproval}
-              className="w-full btn-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isPending ? 'Confirming...' : isConfirming ? 'Listing...' : 'List NFT'}
-            </button>
+              <button
+                type="submit"
+                disabled={isPending || isConfirming || needsApproval || !selectedTokenId}
+                className="w-full btn-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {!selectedTokenId ? 'Select an NFT first' : isPending ? 'Confirming...' : isConfirming ? 'Listing...' : 'List NFT'}
+              </button>
 
-            {isSuccess && (
-              <div className="text-center p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
-                <p className="text-[var(--success)] font-medium">NFT listed successfully!</p>
-              </div>
-            )}
-          </form>
+              {isSuccess && (
+                <div className="text-center p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
+                  <p className="text-[var(--success)] font-medium">NFT listed successfully!</p>
+                </div>
+              )}
+            </form>
+          </div>
         </div>
 
         {/* Active Sales */}
@@ -327,60 +409,74 @@ export default function MarketplacePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sales.map(({ saleId, sale, nftData }) => (
-                <div key={saleId} className="card">
-                  <div className="aspect-square relative mb-4 overflow-hidden rounded-[var(--radius-md)]">
-                    <img
-                      src={nftData.picture}
-                      alt={`NFT #${sale.tokenId}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 right-3 bg-[var(--success)] text-white px-3 py-1 rounded-full text-xs font-medium">
-                      Live
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-lg text-[var(--on-surface)] mb-1">
-                        NFT #{sale.tokenId.toString()}
-                      </h3>
-                      <p className="text-[var(--on-surface-variant)] text-sm">
-                        {nftData.location}
-                      </p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Current Price</span>
-                        <div className="font-bold text-lg text-[var(--on-surface)]">
-                          {formatUsdPrice(sale.currentBidUsd > 0 ? sale.currentBidUsd : sale.listPriceUsd)}
+              {sales.map(({ saleId, sale, nftData }) => {
+                try {
+                  return (
+                    <div key={saleId} className="card">
+                      <div className="aspect-square relative mb-4 overflow-hidden rounded-[var(--radius-md)]">
+                        <img
+                          src={nftData.picture || '/placeholder-image.png'}
+                          alt={`NFT #${sale.tokenId}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder-image.png'
+                          }}
+                        />
+                        <div className="absolute top-3 right-3 bg-[var(--success)] text-white px-3 py-1 rounded-full text-xs font-medium">
+                          Live
                         </div>
                       </div>
-                      <div>
-                        <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Buy Now</span>
-                        <div className="font-bold text-lg text-[var(--primary)]">
-                          {formatUsdPrice(sale.buyNowPriceUsd)}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4 border-t border-[var(--surface-variant)]">
-                      <div className="flex justify-between items-center">
+                      
+                      <div className="space-y-4">
                         <div>
-                          <span className="text-xs text-[var(--on-surface-variant)] uppercase tracking-wide">Time Left</span>
-                          <div className="font-medium text-sm text-[var(--error)]">
-                            {formatTimeLeft(sale.endTime)}
+                          <h3 className="font-semibold text-lg text-[var(--on-surface)] mb-1">
+                            NFT #{sale.tokenId}
+                          </h3>
+                          <p className="text-[var(--on-surface-variant)] text-sm">
+                            {nftData.location || 'Unknown location'}
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Current Price</span>
+                            <div className="font-bold text-lg text-[var(--on-surface)]">
+                              {formatUsdPrice(BigInt(sale.currentBidUsd) > 0n ? sale.currentBidUsd : sale.listPriceUsd)}
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Buy Now</span>
+                            <div className="font-bold text-lg text-[var(--primary)]">
+                              {formatUsdPrice(sale.buyNowPriceUsd)}
+                            </div>
                           </div>
                         </div>
-                        <button className="btn-primary text-sm px-4 py-2">
-                          View Details
-                        </button>
+                        
+                        <div className="pt-4 border-t border-[var(--surface-variant)]">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <span className="text-xs text-[var(--on-surface-variant)] uppercase tracking-wide">Time Left</span>
+                              <div className="font-medium text-sm text-[var(--error)]">
+                                {formatTimeLeft(sale.endTime)}
+                              </div>
+                            </div>
+                            <button className="btn-primary text-sm px-4 py-2">
+                              View Details
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  )
+                } catch (error) {
+                  console.error('Error rendering sale:', error)
+                  return (
+                    <div key={saleId} className="card p-4 text-center">
+                      <p className="text-[var(--error)]">Error loading sale #{saleId}</p>
+                    </div>
+                  )
+                }
+              })}
             </div>
           )}
         </div>
