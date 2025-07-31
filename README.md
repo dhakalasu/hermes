@@ -27,7 +27,7 @@ A decentralized NFT marketplace built on the Base blockchain using Next.js, Onch
 
 ### Blockchain
 - **Solidity** - Smart contract development
-- **Hardhat** - Ethereum development environment
+- **Foundry** - Fast, portable and modular toolkit for Ethereum development
 - **OpenZeppelin** - Secure smart contract library
 - **Base Sepolia** - Testnet for development
 - **Base Mainnet** - Production deployment
@@ -52,6 +52,7 @@ A decentralized NFT marketplace built on the Base blockchain using Next.js, Onch
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) - Ethereum development toolkit
 - MetaMask or Coinbase Wallet
 - Base Sepolia ETH for testing
 
@@ -70,35 +71,44 @@ A decentralized NFT marketplace built on the Base blockchain using Next.js, Onch
 
 3. **Set up environment variables**
    ```bash
-   cp .env.local .env.local
+   cp .env.example .env
    ```
    
-   Update `.env.local` with your values:
+   Update `.env` with your values:
+   ```env
+   PRIVATE_KEY=0xyour_private_key_with_0x_prefix
+   BASESCAN_API_KEY=your_basescan_api_key
+   ```
+   
+   Create `.env.local` for frontend:
    ```env
    NEXT_PUBLIC_ONCHAINKIT_API_KEY=your_coinbase_developer_api_key
    NEXT_PUBLIC_WC_PROJECT_ID=your_walletconnect_project_id
-   PRIVATE_KEY=your_private_key_for_deployment
-   BASESCAN_API_KEY=your_basescan_api_key
    ```
 
-4. **Compile smart contracts**
+4. **Install Foundry dependencies**
+   ```bash
+   forge install
+   ```
+
+5. **Compile smart contracts**
    ```bash
    npm run compile
    ```
 
-5. **Deploy contracts to Base Sepolia**
+6. **Deploy contracts to Base Sepolia**
    ```bash
    npm run deploy:sepolia
    ```
 
-6. **Update contract addresses**
-   After deployment, update `.env.local` with the deployed contract addresses:
+7. **Update contract addresses**
+   After deployment, update `.env.local` with the deployed contract addresses shown in the deployment output:
    ```env
    NEXT_PUBLIC_NFT_CONTRACT_ADDRESS=0x...
    NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS=0x...
    ```
 
-7. **Start the development server**
+8. **Start the development server**
    ```bash
    npm run dev
    ```
@@ -133,6 +143,8 @@ npm run deploy:sepolia
 ```bash
 npm run deploy:mainnet
 ```
+
+Contracts are automatically verified on BaseScan when using the `--verify` flag (included in npm scripts).
 
 ## Usage
 
