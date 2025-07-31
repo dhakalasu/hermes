@@ -49,12 +49,12 @@ export default function MyNFTsPage() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--surface)]">
         <Header />
-        <div className="max-w-2xl mx-auto pt-16 px-4">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">My NFTs</h1>
-            <p className="text-gray-600">Please connect your wallet to view your NFTs</p>
+        <div className="max-w-2xl mx-auto pt-16 px-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">My NFTs</h1>
+            <p className="text-[var(--on-surface-variant)]">Please connect your wallet to view your NFTs</p>
           </div>
         </div>
       </div>
@@ -62,59 +62,66 @@ export default function MyNFTsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--surface)]">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My NFTs</h1>
-          <p className="text-gray-600 mt-2">
+      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        <div className="mb-12 space-y-2">
+          <h1 className="text-4xl font-bold text-[var(--on-surface)]">My NFTs</h1>
+          <p className="text-[var(--on-surface-variant)] text-lg">
             Manage your digital collectibles and list them for sale
           </p>
         </div>
 
         {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : nfts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-              >
-                <path
-                  d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A9.971 9.971 0 0118 28a9.971 9.971 0 016.286 2.286m0 0v-1.714a6 6 0 10-12 0v1.714"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No NFTs found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                You don't own any NFTs yet. Create your first one!
-              </p>
-              <div className="mt-6">
-                <a
-                  href="/mint"
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Create NFT
-                </a>
+          <div className="flex justify-center items-center py-24">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-[var(--surface-variant)] border-t-[var(--primary)]"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-4 h-4 bg-[var(--primary)] rounded-full animate-pulse"></div>
               </div>
             </div>
           </div>
+        ) : nfts.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="w-16 h-16 bg-[var(--surface-container)] rounded-full flex items-center justify-center mx-auto">
+                <svg
+                  className="w-8 h-8 text-[var(--on-surface-variant)]"
+                  stroke="currentColor"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-[var(--on-surface)]">No NFTs found</h3>
+                <p className="text-[var(--on-surface-variant)]">
+                  You don&apos;t own any NFTs yet. Create your first one!
+                </p>
+              </div>
+              <a
+                href="/mint"
+                className="btn-primary inline-block"
+              >
+                Create NFT
+              </a>
+            </div>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {nfts.map((nft) => (
               <NFTCard key={nft.id} nft={nft} />
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

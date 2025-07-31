@@ -39,58 +39,60 @@ export function NFTCard({ nft }: NFTCardProps) {
 
   return (
     <Link href={`/nft/${nft.tokenId}`}>
-      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-        <div className="aspect-square relative">
+      <div className="card group cursor-pointer overflow-hidden">
+        <div className="aspect-square relative mb-4 overflow-hidden rounded-[var(--radius-md)]">
           <Image
             src={nft.image}
             alt={nft.name}
             fill
-            className="object-cover"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           />
           {isOnSale && (
-            <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
-              On Sale
+            <div className="absolute top-3 right-3 bg-[var(--success)] text-white px-3 py-1 rounded-full text-xs font-medium">
+              Live
             </div>
           )}
         </div>
         
-        <div className="p-4">
-          <h3 className="font-semibold text-lg text-gray-900 mb-2 truncate">
-            {nft.name}
-          </h3>
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-lg text-[var(--on-surface)] mb-1 truncate">
+              {nft.name}
+            </h3>
+            
+            <p className="text-[var(--on-surface-variant)] text-sm line-clamp-2 leading-relaxed">
+              {nft.description}
+            </p>
+          </div>
           
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-            {nft.description}
-          </p>
-          
-          <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-            <div>
-              <span className="block">Creator</span>
-              <span className="font-medium text-gray-900">
+          <div className="flex justify-between items-start text-sm">
+            <div className="space-y-1">
+              <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Creator</span>
+              <div className="font-mono text-[var(--on-surface)] text-xs">
                 {nft.creator.slice(0, 6)}...{nft.creator.slice(-4)}
-              </span>
+              </div>
             </div>
-            <div>
-              <span className="block">Owner</span>
-              <span className="font-medium text-gray-900">
+            <div className="space-y-1 text-right">
+              <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Owner</span>
+              <div className="font-mono text-[var(--on-surface)] text-xs">
                 {nft.owner.slice(0, 6)}...{nft.owner.slice(-4)}
-              </span>
+              </div>
             </div>
           </div>
           
           {isOnSale && nft.price && (
-            <div className="border-t pt-3">
-              <div className="flex justify-between items-center">
+            <div className="pt-4 border-t border-[var(--surface-variant)]">
+              <div className="flex justify-between items-end">
                 <div>
-                  <span className="text-sm text-gray-500">Current Price</span>
-                  <div className="font-bold text-lg">
+                  <span className="text-xs text-[var(--on-surface-variant)] uppercase tracking-wide">Current Price</span>
+                  <div className="font-bold text-xl text-[var(--on-surface)] mt-1">
                     {formatEther(BigInt(nft.price))} ETH
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm text-gray-500">Time Left</span>
-                  <div className="font-medium text-sm text-red-600">
+                  <span className="text-xs text-[var(--on-surface-variant)] uppercase tracking-wide">Time Left</span>
+                  <div className="font-medium text-sm text-[var(--error)] mt-1">
                     {formatTimeLeft(timeLeft)}
                   </div>
                 </div>

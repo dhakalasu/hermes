@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Simple in-memory storage for demo (in production, use IPFS/database)
-const metadataStore = new Map<string, any>()
+const metadataStore = new Map<string, unknown>()
 
 export async function POST(request: NextRequest) {
   try {

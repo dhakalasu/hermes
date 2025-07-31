@@ -156,10 +156,15 @@ export default function NFTDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--surface)]">
         <Header />
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-[var(--surface-variant)] border-t-[var(--primary)]"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4 h-4 bg-[var(--primary)] rounded-full animate-pulse"></div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -167,10 +172,10 @@ export default function NFTDetailPage() {
 
   if (!nft) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--surface)]">
         <Header />
-        <div className="max-w-4xl mx-auto pt-16 px-4 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">NFT not found</h1>
+        <div className="max-w-4xl mx-auto pt-16 px-6 text-center">
+          <h1 className="text-2xl font-bold text-[var(--on-surface)]">NFT not found</h1>
         </div>
       </div>
     )
@@ -181,13 +186,13 @@ export default function NFTDetailPage() {
   const timeLeft = nft.sale ? Math.max(0, nft.sale.endTime * 1000 - Date.now()) : 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--surface)]">
       <Header />
       
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="max-w-6xl mx-auto px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Image */}
-          <div className="aspect-square relative rounded-lg overflow-hidden">
+          <div className="aspect-square relative rounded-[var(--radius-lg)] overflow-hidden elevation-2">
             <Image
               src={nft.image}
               alt={nft.name}
@@ -198,62 +203,62 @@ export default function NFTDetailPage() {
           </div>
 
           {/* Details */}
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{nft.name}</h1>
-              <p className="text-gray-600">{nft.description}</p>
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <h1 className="text-4xl font-bold text-[var(--on-surface)] tracking-tight">{nft.name}</h1>
+              <p className="text-[var(--on-surface-variant)] text-lg leading-relaxed">{nft.description}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Creator</span>
-                <p className="font-medium">{nft.creator.slice(0, 6)}...{nft.creator.slice(-4)}</p>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Creator</span>
+                <p className="font-mono text-[var(--on-surface)] text-sm">{nft.creator.slice(0, 6)}...{nft.creator.slice(-4)}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Owner</span>
-                <p className="font-medium">{nft.owner.slice(0, 6)}...{nft.owner.slice(-4)}</p>
+              <div className="space-y-1">
+                <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Owner</span>
+                <p className="font-mono text-[var(--on-surface)] text-sm">{nft.owner.slice(0, 6)}...{nft.owner.slice(-4)}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Token ID</span>
-                <p className="font-medium">{nft.tokenId}</p>
+              <div className="space-y-1">
+                <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Token ID</span>
+                <p className="font-medium text-[var(--on-surface)]">{nft.tokenId}</p>
               </div>
-              <div>
-                <span className="text-gray-500">Royalty</span>
-                <p className="font-medium">{nft.royalty / 100}%</p>
+              <div className="space-y-1">
+                <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Royalty</span>
+                <p className="font-medium text-[var(--on-surface)]">{nft.royalty / 100}%</p>
               </div>
             </div>
 
             {/* Sale Information */}
             {isOnSale && nft.sale && (
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-semibold mb-4">Current Sale</h3>
+              <div className="card">
+                <h3 className="text-xl font-semibold mb-6 text-[var(--on-surface)]">Current Sale</h3>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <span className="text-gray-500">Starting Price</span>
-                    <p className="font-bold text-lg">{formatEther(BigInt(nft.sale.startingPrice))} ETH</p>
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-1">
+                    <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Starting Price</span>
+                    <p className="font-bold text-xl text-[var(--on-surface)]">{formatEther(BigInt(nft.sale.startingPrice))} ETH</p>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Buy Now Price</span>
-                    <p className="font-bold text-lg">{formatEther(BigInt(nft.sale.buyNowPrice))} ETH</p>
+                  <div className="space-y-1">
+                    <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Buy Now Price</span>
+                    <p className="font-bold text-xl text-[var(--on-surface)]">{formatEther(BigInt(nft.sale.buyNowPrice))} ETH</p>
                   </div>
                 </div>
 
                 {nft.sale.currentBid !== '0' && (
-                  <div className="mb-4">
-                    <span className="text-gray-500">Current Highest Bid</span>
-                    <p className="font-bold text-xl text-green-600">
+                  <div className="mb-6 p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
+                    <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Current Highest Bid</span>
+                    <p className="font-bold text-2xl text-[var(--success)] mt-1">
                       {formatEther(BigInt(nft.sale.currentBid))} ETH
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-[var(--on-surface-variant)] mt-1 font-mono">
                       by {nft.sale.currentBidder.slice(0, 6)}...{nft.sale.currentBidder.slice(-4)}
                     </p>
                   </div>
                 )}
 
-                <div className="mb-4">
-                  <span className="text-gray-500">Time Remaining</span>
-                  <p className="font-medium text-red-600">
+                <div className="mb-6 space-y-1">
+                  <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Time Remaining</span>
+                  <p className="font-bold text-lg text-[var(--error)]">
                     {Math.floor(timeLeft / (1000 * 60 * 60 * 24))}d{' '}
                     {Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))}h{' '}
                     {Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))}m
@@ -261,9 +266,9 @@ export default function NFTDetailPage() {
                 </div>
 
                 {!isOwner && isConnected && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
                         Your Bid (ETH)
                       </label>
                       <input
@@ -271,7 +276,7 @@ export default function NFTDetailPage() {
                         step="0.001"
                         value={bidAmount}
                         onChange={(e) => setBidAmount(e.target.value)}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
                         placeholder="Enter bid amount"
                       />
                     </div>
@@ -279,14 +284,14 @@ export default function NFTDetailPage() {
                       <button
                         onClick={handleBid}
                         disabled={isPending || isConfirming || !bidAmount}
-                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1 btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                       >
                         Place Bid
                       </button>
                       <button
                         onClick={handleBuyNow}
                         disabled={isPending || isConfirming}
-                        className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50"
+                        className="flex-1 bg-[var(--success)] text-white py-3 px-4 rounded-[var(--radius-md)] font-medium hover:bg-[var(--success)]/90 transition-all duration-200 hover:transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                       >
                         Buy Now
                       </button>
@@ -298,20 +303,20 @@ export default function NFTDetailPage() {
 
             {/* Listing Section for Owner */}
             {isOwner && !isOnSale && (
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-semibold mb-4">List for Sale</h3>
+              <div className="card">
+                <h3 className="text-xl font-semibold mb-6 text-[var(--on-surface)]">List for Sale</h3>
                 
                 {!isListing ? (
                   <button
                     onClick={() => setIsListing(true)}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                    className="w-full btn-primary py-3"
                   >
                     List NFT for Sale
                   </button>
                 ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
                         Starting Price (ETH)
                       </label>
                       <input
@@ -319,11 +324,11 @@ export default function NFTDetailPage() {
                         step="0.001"
                         value={listingData.startingPrice}
                         onChange={(e) => setListingData({...listingData, startingPrice: e.target.value})}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
                         Buy Now Price (ETH)
                       </label>
                       <input
@@ -331,17 +336,17 @@ export default function NFTDetailPage() {
                         step="0.001"
                         value={listingData.buyNowPrice}
                         onChange={(e) => setListingData({...listingData, buyNowPrice: e.target.value})}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
                         Duration (hours)
                       </label>
                       <select
                         value={listingData.duration}
                         onChange={(e) => setListingData({...listingData, duration: e.target.value})}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
                       >
                         <option value="24">24 hours</option>
                         <option value="72">3 days</option>
@@ -351,14 +356,14 @@ export default function NFTDetailPage() {
                     <div className="flex space-x-4">
                       <button
                         onClick={() => setIsListing(false)}
-                        className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+                        className="flex-1 btn-secondary py-3"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleListNFT}
                         disabled={isPending || isConfirming}
-                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                        className="flex-1 btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                       >
                         List NFT
                       </button>
@@ -369,7 +374,7 @@ export default function NFTDetailPage() {
             )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

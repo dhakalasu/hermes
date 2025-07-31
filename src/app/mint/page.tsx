@@ -122,12 +122,12 @@ export default function MintPage() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--surface)]">
         <Header />
-        <div className="max-w-2xl mx-auto pt-16 px-4">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Create Event NFT</h1>
-            <p className="text-gray-600">Please connect your wallet to create an event NFT</p>
+        <div className="max-w-2xl mx-auto pt-16 px-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">Create Event NFT</h1>
+            <p className="text-[var(--on-surface-variant)]">Please connect your wallet to create an event NFT</p>
           </div>
         </div>
       </div>
@@ -135,25 +135,27 @@ export default function MintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--surface)]">
       <Header />
-      <div className="max-w-2xl mx-auto pt-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Create Event NFT</h1>
-        <p className="text-gray-600 mb-6">Create NFTs for tickets, reservations, and special events</p>
+      <div className="max-w-2xl mx-auto pt-8 px-6">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-[var(--on-surface)]">Create Event NFT</h1>
+          <p className="text-[var(--on-surface-variant)] text-lg">Create NFTs for tickets, reservations, and special events</p>
+        </div>
         
         {isWrongNetwork && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="mb-6 p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)]">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-yellow-800">Wrong Network</h3>
-                <p className="text-sm text-yellow-700 mt-1">
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium text-[var(--warning)]">Wrong Network</h3>
+                <p className="text-sm text-[var(--on-surface-variant)]">
                   Please switch to Base Sepolia network to mint NFTs
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => switchChain({ chainId: baseSepolia.id })}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                className="btn-primary"
               >
                 Switch Network
               </button>
@@ -161,9 +163,9 @@ export default function MintPage() {
           </div>
         )}
         
-        <form onSubmit={handleMint} className="space-y-6 bg-white p-6 rounded-lg shadow">
-          <div>
-            <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-2">
+        <form onSubmit={handleMint} className="card space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="image" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
               Event Image *
             </label>
             <input
@@ -171,13 +173,13 @@ export default function MintPage() {
               id="image"
               accept="image/*"
               onChange={handleImageChange}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="block w-full text-sm text-[var(--on-surface-variant)] file:mr-4 file:py-3 file:px-4 file:rounded-[var(--radius-sm)] file:border-0 file:text-sm file:font-medium file:bg-[var(--surface-container)] file:text-[var(--primary)] hover:file:bg-[var(--surface-container-high)] transition-colors"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
               Event Name *
             </label>
             <input
@@ -185,14 +187,14 @@ export default function MintPage() {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
               placeholder="Enter event name"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label htmlFor="description" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
               Event Description
             </label>
             <textarea
@@ -200,13 +202,13 @@ export default function MintPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors resize-none"
               placeholder="Describe your event"
             />
           </div>
 
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-2">
+            <label htmlFor="location" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
               Event Location *
             </label>
             <input
@@ -214,7 +216,7 @@ export default function MintPage() {
               id="location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] placeholder-[var(--on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
               placeholder="Enter event location"
               required
             />
@@ -223,7 +225,7 @@ export default function MintPage() {
           <button
             type="submit"
             disabled={isPending || isConfirming || isUploading || isWrongNetwork}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full btn-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {isUploading
               ? 'Uploading...'
@@ -235,8 +237,8 @@ export default function MintPage() {
           </button>
 
           {isSuccess && (
-            <div className="text-center p-4 bg-green-50 rounded-md">
-              <p className="text-green-800">Event NFT minted successfully!</p>
+            <div className="text-center p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
+              <p className="text-[var(--success)] font-medium">Event NFT minted successfully!</p>
             </div>
           )}
         </form>

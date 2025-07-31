@@ -85,7 +85,7 @@ export async function GET(
       }
 
       return NextResponse.json(nft)
-    } catch (contractError: any) {
+    } catch (contractError: unknown) {
       // If contract call fails, token likely doesn't exist
       if (contractError.message?.includes('Token does not exist')) {
         return NextResponse.json(
