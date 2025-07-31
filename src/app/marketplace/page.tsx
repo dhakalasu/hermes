@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
@@ -42,6 +43,7 @@ interface UserNFT {
 }
 
 export default function MarketplacePage() {
+  const router = useRouter()
   const { address, isConnected } = useAccount()
   const [sales, setSales] = useState<{ saleId: number; sale: Sale; nftData: NFTData }[]>([])
   const [loading, setLoading] = useState(true)
@@ -213,6 +215,10 @@ export default function MarketplacePage() {
       return `${days}d ${hours % 24}h`
     }
     return `${hours}h ${minutes}m`
+  }
+
+  const handleViewDetails = (tokenId: string) => {
+    router.push(`/nft/${tokenId}`)
   }
 
   if (!isConnected) {
@@ -460,7 +466,10 @@ export default function MarketplacePage() {
                                 {formatTimeLeft(sale.endTime)}
                               </div>
                             </div>
-                            <button className="btn-primary text-sm px-4 py-2">
+                            <button 
+                              onClick={() => handleViewDetails(sale.tokenId)}
+                              className="btn-primary text-sm px-4 py-2"
+                            >
                               View Details
                             </button>
                           </div>

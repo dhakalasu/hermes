@@ -3,6 +3,7 @@ import { createPublicClient, http } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { getValidImageUrl } from '@/lib/imageUtils'
+import MARKETPLACE_ABI from '@/lib/Marketplace.json'
 
 const publicClient = createPublicClient({
   chain: baseSepolia,
@@ -34,10 +35,10 @@ const NFT_ABI = [
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tokenId: string } }
+  { params }: { params: Promise<{ tokenId: string }> }
 ) {
   try {
-    const tokenId = params.tokenId
+    const { tokenId } = await params
     const contractAddress = CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`
     
     // Validate token ID
@@ -71,6 +72,54 @@ export async function GET(
       // Validate and sanitize image URL
       const imageUrl = getValidImageUrl(picture)
       
+      // Check if this NFT is currently listed for sale
+      let saleInfo = null
+      try {
+        // Get the next sale ID to know the range to check
+        const nextSaleId = await publicClient.readContract({
+          address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`,
+          abi: MARKETPLACE_ABI,
+          functionName: 'nextSaleId',
+        }) as bigint
+
+        const totalSales = Number(nextSaleId) - 1
+        
+        // Look for an active sale for this token ID
+        for (let saleId = 1; saleId <= totalSales; saleId++) {
+          try {
+            const sale = await publicClient.readContract({
+              address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`,
+              abi: MARKETPLACE_ABI,
+              functionName: 'getSale',
+              args: [BigInt(saleId)],
+            }) as any
+
+            // Check if this sale is for our token and is active
+            if (sale.active && sale.tokenId.toString() === tokenId) {
+              // Convert USD prices to Wei using the current ETH price
+              // For now, we'll use the USD values directly and let the frontend handle conversion
+              // The marketplace contract actually uses USD values, not Wei
+              saleInfo = {
+                id: saleId.toString(),
+                startingPrice: sale.listPriceUsd.toString(),
+                buyNowPrice: sale.buyNowPriceUsd.toString(), 
+                currentBid: sale.currentBidUsd.toString(),
+                currentBidder: sale.currentBidder,
+                endTime: Number(sale.endTime),
+                active: sale.active,
+              }
+              break // Found the active sale, no need to continue
+            }
+          } catch (saleError) {
+            // Sale doesn't exist or error reading it, continue
+            continue
+          }
+        }
+      } catch (error) {
+        // Error checking marketplace, continue without sale info
+        console.error('Error checking marketplace for sales:', error)
+      }
+
       const nft = {
         id: tokenId,
         tokenId: tokenId,
@@ -82,12 +131,13 @@ export async function GET(
         consumed,
         location,
         datetime: Number(datetime),
+        sale: saleInfo,
       }
 
       return NextResponse.json(nft)
-    } catch (contractError: unknown) {
+    } catch (contractError: any) {
       // If contract call fails, token likely doesn't exist
-      if (contractError.message?.includes('Token does not exist')) {
+      if (contractError?.message?.includes('Token does not exist')) {
         return NextResponse.json(
           { error: 'NFT not found' },
           { status: 404 }

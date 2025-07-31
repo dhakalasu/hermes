@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { formatEther, parseEther } from 'viem'
 import Image from 'next/image'
 import { Header } from '@/components/Header'
@@ -11,36 +11,7 @@ import { UsdPrice, UsdPriceWithLabel } from '@/components/UsdPrice'
 import { UsdInputWithLabel } from '@/components/UsdInput'
 import { useUsdConversion } from '@/hooks/useUsdConversion'
 import { baseSepolia } from 'viem/chains'
-
-const MARKETPLACE_ABI = [
-  {
-    "inputs": [
-      { "internalType": "address", "name": "nftContract", "type": "address" },
-      { "internalType": "uint256", "name": "tokenId", "type": "uint256" },
-      { "internalType": "uint256", "name": "startingPrice", "type": "uint256" },
-      { "internalType": "uint256", "name": "buyNowPrice", "type": "uint256" },
-      { "internalType": "uint256", "name": "duration", "type": "uint256" }
-    ],
-    "name": "listNFT",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "saleId", "type": "uint256" }],
-    "name": "placeBid",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "saleId", "type": "uint256" }],
-    "name": "buyNow",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  }
-]
+import MARKETPLACE_ABI from '@/lib/Marketplace.json'
 
 interface NFTData {
   id: string
@@ -126,8 +97,19 @@ export default function NFTDetailPage() {
     }
   }
 
+  // Get the ETH amount needed for buy now
+  const { data: ethAmountNeeded } = useReadContract({
+    address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`,
+    abi: MARKETPLACE_ABI,
+    functionName: 'usdToEth',
+    args: nft?.sale ? [BigInt(nft.sale.buyNowPrice)] : undefined,
+    query: {
+      enabled: !!nft?.sale?.buyNowPrice,
+    },
+  })
+
   const handleBuyNow = async () => {
-    if (!nft?.sale || !isConnected) return
+    if (!nft?.sale || !isConnected || !ethAmountNeeded) return
 
     try {
       writeContract({
@@ -135,7 +117,7 @@ export default function NFTDetailPage() {
         abi: MARKETPLACE_ABI,
         functionName: 'buyNow',
         args: [BigInt(nft.sale.id)],
-        value: BigInt(nft.sale.buyNowPrice),
+        value: ethAmountNeeded as bigint,
       })
     } catch (error) {
       console.error('Error buying NFT:', error)
@@ -292,25 +274,28 @@ export default function NFTDetailPage() {
               <h3 className="text-xl font-semibold mb-6 text-[var(--on-surface)]">Current Sale</h3>
               
               <div className="grid grid-cols-2 gap-6 mb-6">
-                <UsdPriceWithLabel
-                  weiAmount={BigInt(nft.sale.startingPrice)}
-                  label="Starting Price"
-                  className="font-bold text-xl text-[var(--on-surface)]"
-                />
-                <UsdPriceWithLabel
-                  weiAmount={BigInt(nft.sale.buyNowPrice)}
-                  label="Buy Now Price"
-                  className="font-bold text-xl text-[var(--on-surface)]"
-                />
+                <div className="space-y-1">
+                  <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Starting Price</span>
+                  <div className="font-bold text-xl text-[var(--on-surface)]">
+                    ${(Number(nft.sale.startingPrice) / 100000000).toFixed(2)}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Buy Now Price</span>
+                  <div className="font-bold text-xl text-[var(--on-surface)]">
+                    ${(Number(nft.sale.buyNowPrice) / 100000000).toFixed(2)}
+                  </div>
+                </div>
               </div>
 
               {nft.sale.currentBid !== '0' && (
                 <div className="mb-6 p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
-                  <UsdPriceWithLabel
-                    weiAmount={BigInt(nft.sale.currentBid)}
-                    label="Current Highest Bid"
-                    className="font-bold text-2xl text-[var(--success)]"
-                  />
+                  <div className="space-y-1">
+                    <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Current Highest Bid</span>
+                    <div className="font-bold text-2xl text-[var(--success)]">
+                      ${(Number(nft.sale.currentBid) / 100000000).toFixed(2)}
+                    </div>
+                  </div>
                   <p className="text-sm text-[var(--on-surface-variant)] mt-1 font-mono">
                     by {nft.sale.currentBidder.slice(0, 6)}...{nft.sale.currentBidder.slice(-4)}
                   </p>
