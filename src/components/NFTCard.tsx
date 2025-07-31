@@ -1,8 +1,9 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
+import Image from 'next/image'
 import { formatEther } from 'viem'
+import { UsdPrice } from './UsdPrice'
 
 interface NFT {
   id: string
@@ -12,6 +13,9 @@ interface NFT {
   image: string
   owner: string
   creator: string
+  consumed: boolean
+  location: string
+  datetime: number
   price?: string
   saleId?: string
   endTime?: number
@@ -23,60 +27,63 @@ interface NFTCardProps {
 
 export function NFTCard({ nft }: NFTCardProps) {
   const isOnSale = nft.saleId && nft.endTime && Date.now() < nft.endTime * 1000
-  const timeLeft = nft.endTime ? Math.max(0, nft.endTime * 1000 - Date.now()) : 0
   
-  const formatTimeLeft = (milliseconds: number) => {
-    const seconds = Math.floor(milliseconds / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
+  const formatTimeLeft = (timeLeft: number) => {
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
     
-    if (days > 0) return `${days}d ${hours % 24}h`
-    if (hours > 0) return `${hours}h ${minutes % 60}m`
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`
-    return `${seconds}s`
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h`
+    return '<1h'
   }
 
+  const timeLeft = isOnSale && nft.endTime ? nft.endTime * 1000 - Date.now() : 0
+
   return (
-    <Link href={`/nft/${nft.tokenId}`}>
-      <div className="card group cursor-pointer overflow-hidden">
-        <div className="aspect-square relative mb-4 overflow-hidden rounded-[var(--radius-md)]">
-          <Image
-            src={nft.image}
-            alt={nft.name}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-          />
-          {isOnSale && (
-            <div className="absolute top-3 right-3 bg-[var(--success)] text-white px-3 py-1 rounded-full text-xs font-medium">
-              Live
+    <Link href={`/nft/${nft.tokenId}`} className="block">
+      <div className="card group hover:scale-[1.02] transition-all duration-200 hover:shadow-lg">
+        <div className="relative">
+          <div className="aspect-square w-full rounded-[var(--radius-md)] overflow-hidden bg-[var(--surface-container)]">
+            <Image
+              src={nft.image}
+              alt={nft.name}
+              width={400}
+              height={400}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder-image.png'
+              }}
+            />
+          </div>
+          
+          {nft.consumed && (
+            <div className="absolute top-3 right-3 px-3 py-1 bg-[var(--error)] text-[var(--on-error)] text-xs font-medium rounded-full">
+              Used
             </div>
           )}
         </div>
         
-        <div className="space-y-4">
+        <div className="p-4 space-y-3">
           <div>
-            <h3 className="font-semibold text-lg text-[var(--on-surface)] mb-1 truncate">
+            <h3 className="font-semibold text-[var(--on-surface)] text-lg leading-tight line-clamp-1">
               {nft.name}
             </h3>
-            
-            <p className="text-[var(--on-surface-variant)] text-sm line-clamp-2 leading-relaxed">
+            <p className="text-[var(--on-surface-variant)] text-sm mt-1 line-clamp-2">
               {nft.description}
             </p>
           </div>
-          
-          <div className="flex justify-between items-start text-sm">
-            <div className="space-y-1">
-              <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Creator</span>
-              <div className="font-mono text-[var(--on-surface)] text-xs">
-                {nft.creator.slice(0, 6)}...{nft.creator.slice(-4)}
+
+          <div className="flex justify-between items-start text-xs">
+            <div>
+              <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Location</span>
+              <div className="font-medium text-[var(--on-surface)] mt-0.5">
+                {nft.location}
               </div>
             </div>
-            <div className="space-y-1 text-right">
-              <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Owner</span>
-              <div className="font-mono text-[var(--on-surface)] text-xs">
-                {nft.owner.slice(0, 6)}...{nft.owner.slice(-4)}
+            <div className="text-right">
+              <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Date</span>
+              <div className="font-medium text-[var(--on-surface)] mt-0.5">
+                {new Date(nft.datetime * 1000).toLocaleDateString()}
               </div>
             </div>
           </div>
@@ -87,7 +94,10 @@ export function NFTCard({ nft }: NFTCardProps) {
                 <div>
                   <span className="text-xs text-[var(--on-surface-variant)] uppercase tracking-wide">Current Price</span>
                   <div className="font-bold text-xl text-[var(--on-surface)] mt-1">
-                    {formatEther(BigInt(nft.price))} ETH
+                    <UsdPrice 
+                      weiAmount={BigInt(nft.price)} 
+                      className="text-xl font-bold text-[var(--on-surface)]"
+                    />
                   </div>
                 </div>
                 <div className="text-right">
