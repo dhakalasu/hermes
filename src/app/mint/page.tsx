@@ -9,13 +9,28 @@ import { baseSepolia } from 'viem/chains'
 const NFT_ABI = [
   {
     "inputs": [
-      { "internalType": "address", "name": "to", "type": "address" },
-      { "internalType": "string", "name": "tokenURI", "type": "string" },
-      { "internalType": "uint256", "name": "royaltyBasisPoints", "type": "uint256" }
+      { "internalType": "string", "name": "picture", "type": "string" },
+      { "internalType": "string", "name": "location", "type": "string" },
+      { "internalType": "uint256", "name": "datetime", "type": "uint256" }
     ],
     "name": "mint",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
+    ],
+    "name": "getNFTData",
+    "outputs": [
+      { "internalType": "string", "name": "picture", "type": "string" },
+      { "internalType": "string", "name": "location", "type": "string" },
+      { "internalType": "uint256", "name": "datetime", "type": "uint256" },
+      { "internalType": "bool", "name": "consumed", "type": "bool" },
+      { "internalType": "address", "name": "originalOwner", "type": "address" }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ]
@@ -25,7 +40,9 @@ export default function MintPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [image, setImage] = useState<File | null>(null)
-  const [royalty, setRoyalty] = useState(250) // 2.5%
+  const [location, setLocation] = useState('')
+  const [eventDate, setEventDate] = useState('')
+  const [eventTime, setEventTime] = useState('')
   const [isUploading, setIsUploading] = useState(false)
 
   const { writeContract, data: hash, isPending } = useWriteContract()
@@ -42,7 +59,7 @@ export default function MintPage() {
   const handleMint = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!isConnected || !address || !image || !name) {
+    if (!isConnected || !address || !image || !name || !location || !eventDate || !eventTime) {
       alert('Please connect wallet and fill all required fields')
       return
     }
@@ -55,6 +72,9 @@ export default function MintPage() {
       formData.append('image', image)
       formData.append('name', name)
       formData.append('description', description)
+      formData.append('location', location)
+      formData.append('eventDate', eventDate)
+      formData.append('eventTime', eventTime)
 
       const response = await fetch('/api/upload-metadata', {
         method: 'POST',
@@ -65,14 +85,17 @@ export default function MintPage() {
         throw new Error('Failed to upload metadata')
       }
 
-      const { tokenURI } = await response.json()
+      const { pictureUrl } = await response.json()
+
+      // Convert date and time to Unix timestamp
+      const eventDateTime = new Date(`${eventDate}T${eventTime}`).getTime() / 1000
 
       // Mint NFT
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
         abi: NFT_ABI,
         functionName: 'mint',
-        args: [address, tokenURI, BigInt(royalty)],
+        args: [pictureUrl, location, BigInt(Math.floor(eventDateTime))],
       })
     } catch (error) {
       console.error('Error minting NFT:', error)
@@ -88,8 +111,8 @@ export default function MintPage() {
         <Header />
         <div className="max-w-2xl mx-auto pt-16 px-4">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Create NFT</h1>
-            <p className="text-gray-600">Please connect your wallet to create an NFT</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Create Event NFT</h1>
+            <p className="text-gray-600">Please connect your wallet to create an event NFT</p>
           </div>
         </div>
       </div>
@@ -100,17 +123,18 @@ export default function MintPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="max-w-2xl mx-auto pt-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Create NFT</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Create Event NFT</h1>
+        <p className="text-gray-600 mb-6">Create NFTs for tickets, reservations, and special events</p>
         
         <form onSubmit={handleMint} className="space-y-6 bg-white p-6 rounded-lg shadow">
           <div>
             <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-2">
-              Image/Media *
+              Event Image *
             </label>
             <input
               type="file"
               id="image"
-              accept="image/*,video/*,audio/*"
+              accept="image/*"
               onChange={handleImageChange}
               className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               required
@@ -119,7 +143,7 @@ export default function MintPage() {
 
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Name *
+              Event Name *
             </label>
             <input
               type="text"
@@ -127,14 +151,14 @@ export default function MintPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter NFT name"
+              placeholder="Enter event name"
               required
             />
           </div>
 
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+              Event Description
             </label>
             <textarea
               id="description"
@@ -142,27 +166,53 @@ export default function MintPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Describe your NFT"
+              placeholder="Describe your event"
             />
           </div>
 
           <div>
-            <label htmlFor="royalty" className="block text-sm font-medium text-gray-700 mb-2">
-              Royalty Percentage (max 10%)
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+              Event Location *
             </label>
             <input
-              type="number"
-              id="royalty"
-              value={royalty / 100}
-              onChange={(e) => setRoyalty(Math.min(1000, Number(e.target.value) * 100))}
-              min="0"
-              max="10"
-              step="0.1"
+              type="text"
+              id="location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
               className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter event location"
+              required
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Royalty you'll receive on secondary sales
-            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-2">
+                Event Date *
+              </label>
+              <input
+                type="date"
+                id="eventDate"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="eventTime" className="block text-sm font-medium text-gray-700 mb-2">
+                Event Time *
+              </label>
+              <input
+                type="time"
+                id="eventTime"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
           </div>
 
           <button
@@ -176,12 +226,12 @@ export default function MintPage() {
               ? 'Confirming...'
               : isConfirming
               ? 'Minting...'
-              : 'Create NFT'}
+              : 'Create Event NFT'}
           </button>
 
           {isSuccess && (
             <div className="text-center p-4 bg-green-50 rounded-md">
-              <p className="text-green-800">NFT minted successfully!</p>
+              <p className="text-green-800">Event NFT minted successfully!</p>
             </div>
           )}
         </form>
