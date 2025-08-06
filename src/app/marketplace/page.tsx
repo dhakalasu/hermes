@@ -5,6 +5,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadCont
 import { Header } from '@/components/Header'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
+import { AddressLink } from '@/components/AddressLink'
 import MARKETPLACE_ABI from '@/lib/Marketplace.json'
 import NFT_ABI from '@/lib/BaseNFT.json'
 
@@ -26,6 +27,8 @@ interface NFTData {
   consumed: boolean
   originalOwner: string
   currentOwner: string
+  eventName?: string
+  eventType?: string
 }
 
 interface UserNFT {
@@ -458,10 +461,15 @@ export default function MarketplacePage() {
                       <div className="space-y-4">
                         <div>
                           <h3 className="font-semibold text-lg text-[var(--on-surface)] mb-1">
-                            NFT #{sale.tokenId}
+                            {nftData.eventName || `Event at ${nftData.location}` || `NFT #${sale.tokenId}`}
                           </h3>
                           <p className="text-[var(--on-surface-variant)] text-sm">
-                            {nftData.location || 'Unknown location'}
+                            {nftData.eventType && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] mr-2 capitalize">
+                                {nftData.eventType}
+                              </span>
+                            )}
+                            Token #{sale.tokenId} • {nftData.location || 'Unknown location'}
                           </p>
                         </div>
                         
@@ -480,7 +488,14 @@ export default function MarketplacePage() {
                           </div>
                         </div>
                         
-                        <div className="pt-4 border-t border-[var(--surface-variant)]">
+                        <div className="pt-4 border-t border-[var(--surface-variant)] space-y-3">
+                          <div className="text-xs">
+                            <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Seller</span>
+                            <div className="font-mono mt-0.5">
+                              <AddressLink address={sale.seller} className="text-xs" />
+                            </div>
+                          </div>
+                          
                           <div className="flex justify-between items-center">
                             <div>
                               <span className="text-xs text-[var(--on-surface-variant)] uppercase tracking-wide">Time Left</span>

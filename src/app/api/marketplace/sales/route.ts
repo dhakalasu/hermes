@@ -51,6 +51,17 @@ export async function GET() {
 
           // Validate and sanitize image URL
           const imageUrl = getValidImageUrl(nftData[0])
+          
+          // Helper function to convert event type to string
+          const getEventTypeString = (eventType: number): string => {
+            switch (eventType) {
+              case 0: return 'food'
+              case 1: return 'sports'
+              case 2: return 'events'
+              case 3: return 'other'
+              default: return 'other'
+            }
+          }
 
           activeSales.push({
             saleId,
@@ -70,7 +81,9 @@ export async function GET() {
               datetime: nftData[2].toString(),
               consumed: nftData[3],
               originalOwner: nftData[4],
-              currentOwner: sale.seller, // Current owner is the seller
+              currentOwner: sale.seller,
+              eventName: `Event at ${nftData[1]}`,
+              eventType: getEventTypeString(Number(nftData[6])),
             }
           })
         }

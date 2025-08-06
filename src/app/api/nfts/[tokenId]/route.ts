@@ -34,10 +34,10 @@ const NFT_ABI = [
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tokenId: string } }
+  context: { params: Promise<{ tokenId: string }> }
 ) {
   try {
-    const tokenId = params.tokenId
+    const { tokenId } = await context.params
     const contractAddress = CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`
     
     // Validate token ID

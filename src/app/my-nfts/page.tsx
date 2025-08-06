@@ -6,6 +6,7 @@ import { Header } from '@/components/Header'
 import { NFTCard } from '@/components/NFTCard'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
+import { AddressLink } from '@/components/AddressLink'
 import MARKETPLACE_ABI from '@/lib/Marketplace.json'
 
 interface NFT {
@@ -19,6 +20,7 @@ interface NFT {
   price?: string
   saleId?: string
   endTime?: number
+  eventType?: string
 }
 
 interface ClaimableAuction {
@@ -40,6 +42,8 @@ interface ClaimableAuction {
     consumed: boolean
     originalOwner: string
     currentOwner: string
+    eventName?: string
+    eventType?: string
   }
   claimType: 'reclaim' | 'claim'
 }
@@ -204,29 +208,52 @@ export default function MyNFTsPage() {
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-semibold text-lg text-[var(--on-surface)] mb-1">
-                        NFT #{auction.sale.tokenId}
+                        {auction.nftData.eventName || `Event at ${auction.nftData.location}` || `NFT #${auction.sale.tokenId}`}
                       </h3>
                       <p className="text-[var(--on-surface-variant)] text-sm">
-                        {auction.nftData.location || 'Unknown location'}
+                        {auction.nftData.eventType && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] mr-2 capitalize">
+                            {auction.nftData.eventType}
+                          </span>
+                        )}
+                        Token #{auction.sale.tokenId} • {auction.nftData.location || 'Unknown location'}
                       </p>
                     </div>
                     
-                    <div className="text-sm">
-                      {auction.claimType === 'claim' ? (
-                        <div>
-                          <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Winning Bid</span>
-                          <div className="font-bold text-lg text-[var(--success)]">
-                            {formatUsdPrice(auction.sale.currentBidUsd)}
-                          </div>
+                    <div className="space-y-3">
+                      <div className="text-xs">
+                        <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Seller</span>
+                        <div className="font-mono mt-0.5">
+                          <AddressLink address={auction.sale.seller} className="text-xs" />
                         </div>
-                      ) : (
-                        <div>
-                          <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">No Bids Received</span>
-                          <div className="font-bold text-lg text-[var(--on-surface-variant)]">
-                            Starting: {formatUsdPrice(auction.sale.listPriceUsd)}
+                      </div>
+                      
+                      {auction.claimType === 'claim' && auction.sale.currentBidder !== '0x0000000000000000000000000000000000000000' && (
+                        <div className="text-xs">
+                          <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Winning Bidder</span>
+                          <div className="font-mono mt-0.5">
+                            <AddressLink address={auction.sale.currentBidder} className="text-xs" />
                           </div>
                         </div>
                       )}
+                      
+                      <div className="text-sm">
+                        {auction.claimType === 'claim' ? (
+                          <div>
+                            <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Winning Bid</span>
+                            <div className="font-bold text-lg text-[var(--success)]">
+                              {formatUsdPrice(auction.sale.currentBidUsd)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">No Bids Received</span>
+                            <div className="font-bold text-lg text-[var(--on-surface-variant)]">
+                              Starting: {formatUsdPrice(auction.sale.listPriceUsd)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <button

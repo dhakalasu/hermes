@@ -10,6 +10,7 @@ import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { UsdPrice, UsdPriceWithLabel } from '@/components/UsdPrice'
 import { UsdInputWithLabel } from '@/components/UsdInput'
 import { useUsdConversion } from '@/hooks/useUsdConversion'
+import { AddressLink } from '@/components/AddressLink'
 import { baseSepolia } from 'viem/chains'
 
 const MARKETPLACE_ABI = [
@@ -262,15 +263,15 @@ export default function NFTDetailPage() {
               </div>
               <div className="space-y-1">
                 <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Owner</span>
-                <p className="font-mono text-[var(--on-surface)] text-sm">
-                  {nft.owner.slice(0, 6)}...{nft.owner.slice(-4)}
-                </p>
+                <div className="font-mono text-sm">
+                  <AddressLink address={nft.owner} />
+                </div>
               </div>
               <div className="space-y-1">
                 <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Creator</span>
-                <p className="font-mono text-[var(--on-surface)] text-sm">
-                  {nft.creator.slice(0, 6)}...{nft.creator.slice(-4)}
-                </p>
+                <div className="font-mono text-sm">
+                  <AddressLink address={nft.creator} />
+                </div>
               </div>
             </div>
 
@@ -311,9 +312,9 @@ export default function NFTDetailPage() {
                     label="Current Highest Bid"
                     className="font-bold text-2xl text-[var(--success)]"
                   />
-                  <p className="text-sm text-[var(--on-surface-variant)] mt-1 font-mono">
-                    by {nft.sale.currentBidder.slice(0, 6)}...{nft.sale.currentBidder.slice(-4)}
-                  </p>
+                  <div className="text-sm text-[var(--on-surface-variant)] mt-1 font-mono">
+                    by <AddressLink address={nft.sale.currentBidder} className="text-sm" />
+                  </div>
                 </div>
               )}
 

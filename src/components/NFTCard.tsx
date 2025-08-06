@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { formatEther } from 'viem'
 import { UsdPrice } from './UsdPrice'
+import { AddressLink } from '@/components/AddressLink'
 
 interface NFT {
   id: string
@@ -16,6 +17,7 @@ interface NFT {
   consumed: boolean
   location: string
   datetime: number
+  eventType?: string
   price?: string
   saleId?: string
   endTime?: number
@@ -68,22 +70,38 @@ export function NFTCard({ nft }: NFTCardProps) {
             <h3 className="font-semibold text-[var(--on-surface)] text-lg leading-tight line-clamp-1">
               {nft.name}
             </h3>
-            <p className="text-[var(--on-surface-variant)] text-sm mt-1 line-clamp-2">
-              {nft.description}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              {nft.eventType && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] capitalize">
+                  {nft.eventType}
+                </span>
+              )}
+              <p className="text-[var(--on-surface-variant)] text-sm line-clamp-2 flex-1">
+                {nft.description}
+              </p>
+            </div>
           </div>
 
-          <div className="flex justify-between items-start text-xs">
-            <div>
-              <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Location</span>
-              <div className="font-medium text-[var(--on-surface)] mt-0.5">
-                {nft.location}
+          <div className="space-y-3">
+            <div className="flex justify-between items-start text-xs">
+              <div>
+                <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Location</span>
+                <div className="font-medium text-[var(--on-surface)] mt-0.5">
+                  {nft.location}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Date</span>
+                <div className="font-medium text-[var(--on-surface)] mt-0.5">
+                  {new Date(nft.datetime * 1000).toLocaleDateString()}
+                </div>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Date</span>
-              <div className="font-medium text-[var(--on-surface)] mt-0.5">
-                {new Date(nft.datetime * 1000).toLocaleDateString()}
+            
+            <div className="text-xs">
+              <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Owner</span>
+              <div className="font-mono mt-0.5">
+                <AddressLink address={nft.owner} className="text-xs" />
               </div>
             </div>
           </div>

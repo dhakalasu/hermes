@@ -32,7 +32,9 @@ const NFT_ABI = [
       { "internalType": "string", "name": "location", "type": "string" },
       { "internalType": "uint256", "name": "datetime", "type": "uint256" },
       { "internalType": "bool", "name": "consumed", "type": "bool" },
-      { "internalType": "address", "name": "originalOwner", "type": "address" }
+      { "internalType": "address", "name": "originalOwner", "type": "address" },
+      { "internalType": "address", "name": "currentOwner", "type": "address" },
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -58,10 +60,22 @@ async function fetchNFTData(tokenId: number) {
       }),
     ])
 
-    const [picture, location, datetime, consumed, originalOwner] = nftData
+    const [picture, location, datetime, consumed, originalOwner, currentOwner, eventType] = nftData
     
     // Validate and sanitize image URL
     const imageUrl = getValidImageUrl(picture)
+    
+    const getEventTypeString = (eventType: number): string => {
+      switch (eventType) {
+        case 0: return 'food'
+        case 1: return 'sports'
+        case 2: return 'events'
+        case 3: return 'other'
+        default: return 'other'
+      }
+    }
+
+    const eventTypeString = getEventTypeString(Number(eventType))
     
     return {
       id: tokenId.toString(),
@@ -74,6 +88,7 @@ async function fetchNFTData(tokenId: number) {
       consumed,
       location,
       datetime: Number(datetime),
+      eventType: eventTypeString,
     }
   } catch (error) {
     console.error(`Error fetching NFT ${tokenId}:`, error)

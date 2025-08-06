@@ -81,6 +81,25 @@
   },
   {
     "type": "function",
+    "name": "getEventTypeString",
+    "inputs": [
+      {
+        "name": "eventType",
+        "type": "uint8",
+        "internalType": "enum BaseNFT.EventType"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "getNFTData",
     "inputs": [
       {
@@ -114,6 +133,16 @@
         "name": "originalOwner",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "currentOwner",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "eventType",
+        "type": "uint8",
+        "internalType": "enum BaseNFT.EventType"
       }
     ],
     "stateMutability": "view"
@@ -144,6 +173,25 @@
   },
   {
     "type": "function",
+    "name": "isConsumed",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "mint",
     "inputs": [
       {
@@ -160,6 +208,11 @@
         "name": "datetime",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "eventType",
+        "type": "uint8",
+        "internalType": "enum BaseNFT.EventType"
       }
     ],
     "outputs": [
@@ -219,6 +272,11 @@
         "name": "originalOwner",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "eventType",
+        "type": "uint8",
+        "internalType": "enum BaseNFT.EventType"
       }
     ],
     "stateMutability": "view"
@@ -533,6 +591,12 @@
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "eventType",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum BaseNFT.EventType"
       }
     ],
     "anonymous": false

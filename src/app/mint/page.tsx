@@ -11,7 +11,8 @@ const NFT_ABI = [
     "inputs": [
       { "internalType": "string", "name": "picture", "type": "string" },
       { "internalType": "string", "name": "location", "type": "string" },
-      { "internalType": "uint256", "name": "datetime", "type": "uint256" }
+      { "internalType": "uint256", "name": "datetime", "type": "uint256" },
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
     ],
     "name": "mint",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -28,9 +29,20 @@ const NFT_ABI = [
       { "internalType": "string", "name": "location", "type": "string" },
       { "internalType": "uint256", "name": "datetime", "type": "uint256" },
       { "internalType": "bool", "name": "consumed", "type": "bool" },
-      { "internalType": "address", "name": "originalOwner", "type": "address" }
+      { "internalType": "address", "name": "originalOwner", "type": "address" },
+      { "internalType": "address", "name": "currentOwner", "type": "address" },
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
+    ],
+    "name": "getEventTypeString",
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "pure",
     "type": "function"
   }
 ]
@@ -43,6 +55,7 @@ export default function MintPage() {
   const [location, setLocation] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
+  const [eventType, setEventType] = useState('0') // 0=FOOD, 1=SPORTS, 2=EVENTS, 3=OTHER
   const [isUploading, setIsUploading] = useState(false)
 
   const { writeContract, data: hash, isPending } = useWriteContract()
@@ -58,7 +71,7 @@ export default function MintPage() {
   const handleMint = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!isConnected || !address || !imageUrl || !name || !location || !eventDate || !eventTime) {
+    if (!isConnected || !address || !imageUrl || !name || !location || !eventDate || !eventTime || eventType === '') {
       alert('Please connect wallet and fill all required fields')
       return
     }
@@ -107,7 +120,7 @@ export default function MintPage() {
         address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
         abi: NFT_ABI,
         functionName: 'mint',
-        args: [pictureUrl, location, BigInt(Math.floor(eventDateTime))],
+        args: [pictureUrl, location, BigInt(Math.floor(eventDateTime)), parseInt(eventType)],
       })
     } catch (error) {
       console.error('Error minting NFT:', error)
@@ -232,6 +245,25 @@ export default function MintPage() {
               placeholder="Enter event location"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="eventType" className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+              Event Type *
+            </label>
+            <select
+              id="eventType"
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value)}
+              className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+              required
+            >
+              <option value="">Select event type</option>
+              <option value="0">Food & Dining</option>
+              <option value="1">Sports</option>
+              <option value="2">Events & Entertainment</option>
+              <option value="3">Other</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

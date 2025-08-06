@@ -55,18 +55,26 @@ export async function GET(
         const endTime = Number(sale.endTime)
         const isExpired = endTime <= currentTime
         
+        // Debug logging
+        console.log(`Sale ${saleId}: endTime=${endTime}, currentTime=${currentTime}, isExpired=${isExpired}, active=${sale.active}`)
+        
         if (sale.active && isExpired) {
           // Check if user can claim this auction
           const userAddress = address.toLowerCase()
           const seller = sale.seller.toLowerCase()
           const currentBidder = sale.currentBidder.toLowerCase()
-          const hasNoBids = sale.currentBidUsd === '0'
+          
+          // Check for no bids more robustly
+          const currentBidAmount = BigInt(sale.currentBidUsd)
+          const hasNoBids = currentBidAmount === 0n || sale.currentBidder === '0x0000000000000000000000000000000000000000'
           
           // User can claim if:
           // 1. They are the seller and there are no bids
           // 2. They are the highest bidder and there are bids
           const canClaim = (userAddress === seller && hasNoBids) || 
                           (userAddress === currentBidder && !hasNoBids)
+          
+          console.log(`Sale ${saleId}: userAddress=${userAddress}, seller=${seller}, currentBidder=${currentBidder}, hasNoBids=${hasNoBids}, canClaim=${canClaim}`)
           
           if (canClaim) {
             // Get NFT data
@@ -79,6 +87,17 @@ export async function GET(
 
             // Validate and sanitize image URL
             const imageUrl = getValidImageUrl(nftData[0])
+            
+            // Helper function to convert event type to string
+            const getEventTypeString = (eventType: number): string => {
+              switch (eventType) {
+                case 0: return 'food'
+                case 1: return 'sports'
+                case 2: return 'events'
+                case 3: return 'other'
+                default: return 'other'
+              }
+            }
 
             claimableAuctions.push({
               saleId,
@@ -99,6 +118,8 @@ export async function GET(
                 consumed: nftData[3],
                 originalOwner: nftData[4],
                 currentOwner: sale.seller,
+                eventName: `Event at ${nftData[1]}`,
+                eventType: getEventTypeString(Number(nftData[6])),
               },
               claimType: hasNoBids ? 'reclaim' : 'claim'
             })
