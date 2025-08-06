@@ -25,12 +25,16 @@ const NFT_ABI = [
       { "internalType": "string", "name": "location", "type": "string" },
       { "internalType": "uint256", "name": "datetime", "type": "uint256" },
       { "internalType": "bool", "name": "consumed", "type": "bool" },
-      { "internalType": "address", "name": "originalOwner", "type": "address" }
+      { "internalType": "address", "name": "originalOwner", "type": "address" },
+      { "internalType": "address", "name": "currentOwner", "type": "address" },
+      { "internalType": "uint8", "name": "eventType", "type": "uint8" }
     ],
     "stateMutability": "view",
     "type": "function"
   }
 ] as const
+
+import MARKETPLACE_ABI from '@/lib/Marketplace.json'
 
 export async function GET(
   request: NextRequest,
@@ -66,10 +70,68 @@ export async function GET(
         }),
       ])
 
-      const [picture, location, datetime, consumed, originalOwner] = nftData
+      const [picture, location, datetime, consumed, originalOwner, currentOwner, eventType] = nftData
       
       // Validate and sanitize image URL
       const imageUrl = getValidImageUrl(picture)
+      
+      // Get event type string
+      const getEventTypeString = (eventType: number): string => {
+        switch (eventType) {
+          case 0: return 'food'
+          case 1: return 'sports'
+          case 2: return 'events'
+          case 3: return 'other'
+          default: return 'other'
+        }
+      }
+
+      // Fetch marketplace data to check if this NFT is currently for sale
+      let saleData = null
+      try {
+        const marketplaceAddress = CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`
+        
+        // Get the next sale ID to know how many sales exist (same as marketplace API)
+        const nextSaleId = await publicClient.readContract({
+          address: marketplaceAddress,
+          abi: MARKETPLACE_ABI,
+          functionName: 'nextSaleId',
+        }) as bigint
+
+        const totalSales = Number(nextSaleId) - 1 // nextSaleId is the next ID to be used
+
+        // Look for active sale for this token ID
+        for (let saleId = 1; saleId <= totalSales; saleId++) {
+          try {
+            const sale = await publicClient.readContract({
+              address: marketplaceAddress,
+              abi: MARKETPLACE_ABI,
+              functionName: 'getSale',
+              args: [BigInt(saleId)],
+            }) as any
+
+            // Check if this sale is for our token ID and is still active
+            if (Number(sale.tokenId) === tokenIdNum && sale.active) {
+              saleData = {
+                id: saleId.toString(),
+                startingPrice: sale.listPriceUsd.toString(),
+                buyNowPrice: sale.buyNowPriceUsd.toString(),
+                currentBid: sale.currentBidUsd.toString(),
+                currentBidder: sale.currentBidder.toLowerCase(),
+                endTime: Number(sale.endTime),
+                active: sale.active,
+              }
+              break
+            }
+          } catch (saleError) {
+            // Skip invalid sales
+            continue
+          }
+        }
+      } catch (marketplaceError) {
+        console.warn('Could not fetch marketplace data:', marketplaceError)
+        // Continue without sale data
+      }
       
       const nft = {
         id: tokenId,
@@ -82,6 +144,8 @@ export async function GET(
         consumed,
         location,
         datetime: Number(datetime),
+        eventType: getEventTypeString(Number(eventType)),
+        sale: saleData, // Include sale data if available
       }
 
       return NextResponse.json(nft)

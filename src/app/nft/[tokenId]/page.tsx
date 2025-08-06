@@ -73,6 +73,7 @@ export default function NFTDetailPage() {
   
   const [nft, setNft] = useState<NFTData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState(Date.now())
   
   // USD input states with ETH equivalents
   const [bidAmountUsd, setBidAmountUsd] = useState('')
@@ -96,6 +97,15 @@ export default function NFTDetailPage() {
       fetchNFT()
     }
   }, [tokenId])
+
+  // Real-time timer updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now())
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   const fetchNFT = async () => {
     try {
@@ -185,6 +195,32 @@ export default function NFTDetailPage() {
     }))
   }
 
+  const formatUsdPrice = (priceUsd: bigint | string) => {
+    const price = typeof priceUsd === 'string' ? BigInt(priceUsd) : priceUsd
+    return `$${(Number(price) / 100000000).toFixed(2)}`
+  }
+
+  const formatTimeLeft = (timeLeft: number) => {
+    if (timeLeft === 0) {
+      return 'Expired'
+    }
+    
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`
+    } else {
+      return `${seconds}s`
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--surface)]">
@@ -222,7 +258,13 @@ export default function NFTDetailPage() {
 
   const isOwner = isConnected && address?.toLowerCase() === nft.owner.toLowerCase()
   const isOnSale = nft.sale && nft.sale.active
-  const timeLeft = isOnSale && nft.sale ? Math.max(0, nft.sale.endTime * 1000 - Date.now()) : 0
+  const timeLeft = isOnSale && nft.sale ? Math.max(0, nft.sale.endTime * 1000 - currentTime) : 0
+
+  // Debug logging
+  console.log('NFT Data:', nft)
+  console.log('Sale Data:', nft.sale)
+  console.log('Is On Sale:', isOnSale)
+  console.log('Is Owner:', isOwner)
 
   return (
     <div className="min-h-screen bg-[var(--surface)]">
@@ -283,6 +325,17 @@ export default function NFTDetailPage() {
                 </p>
               </div>
             )}
+
+            {/* Debug Info */}
+            <div className="p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)]">
+              <h3 className="font-semibold text-[var(--warning)] mb-2">Debug Info</h3>
+              <p className="text-[var(--on-surface-variant)] text-sm">
+                Sale Data: {nft.sale ? 'Present' : 'Not found'}<br/>
+                Is On Sale: {isOnSale ? 'Yes' : 'No'}<br/>
+                Sale Active: {nft.sale?.active ? 'Yes' : 'No'}<br/>
+                Is Owner: {isOwner ? 'Yes' : 'No'}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -293,25 +346,28 @@ export default function NFTDetailPage() {
               <h3 className="text-xl font-semibold mb-6 text-[var(--on-surface)]">Current Sale</h3>
               
               <div className="grid grid-cols-2 gap-6 mb-6">
-                <UsdPriceWithLabel
-                  weiAmount={BigInt(nft.sale.startingPrice)}
-                  label="Starting Price"
-                  className="font-bold text-xl text-[var(--on-surface)]"
-                />
-                <UsdPriceWithLabel
-                  weiAmount={BigInt(nft.sale.buyNowPrice)}
-                  label="Buy Now Price"
-                  className="font-bold text-xl text-[var(--on-surface)]"
-                />
+                <div>
+                  <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Starting Price</span>
+                  <div className="font-bold text-xl text-[var(--on-surface)]">
+                    {formatUsdPrice(nft.sale.startingPrice)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Buy Now Price</span>
+                  <div className="font-bold text-xl text-[var(--on-surface)]">
+                    {formatUsdPrice(nft.sale.buyNowPrice)}
+                  </div>
+                </div>
               </div>
 
               {nft.sale.currentBid !== '0' && (
                 <div className="mb-6 p-4 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-[var(--radius-md)]">
-                  <UsdPriceWithLabel
-                    weiAmount={BigInt(nft.sale.currentBid)}
-                    label="Current Highest Bid"
-                    className="font-bold text-2xl text-[var(--success)]"
-                  />
+                  <div>
+                    <span className="text-[var(--success)] text-xs uppercase tracking-wide">Current Highest Bid</span>
+                    <div className="font-bold text-2xl text-[var(--success)]">
+                      {formatUsdPrice(nft.sale.currentBid)}
+                    </div>
+                  </div>
                   <div className="text-sm text-[var(--on-surface-variant)] mt-1 font-mono">
                     by <AddressLink address={nft.sale.currentBidder} className="text-sm" />
                   </div>
@@ -321,9 +377,7 @@ export default function NFTDetailPage() {
               <div className="mb-6 space-y-1">
                 <span className="text-[var(--on-surface-variant)] text-xs uppercase tracking-wide">Time Remaining</span>
                 <p className="font-bold text-lg text-[var(--error)]">
-                  {Math.floor(timeLeft / (1000 * 60 * 60 * 24))}d{' '}
-                  {Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))}h{' '}
-                  {Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))}m
+                  {formatTimeLeft(timeLeft)}
                 </p>
               </div>
 

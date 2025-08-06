@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import Link from 'next/link'
 import { Header } from '@/components/Header'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
@@ -575,9 +576,12 @@ export default function MarketplacePage() {
                                 {formatTimeLeft(sale.endTime)}
                               </div>
                             </div>
-                            <button className="btn-primary text-sm px-4 py-2">
+                            <Link 
+                              href={`/nft/${sale.tokenId}`}
+                              className="btn-primary text-sm px-4 py-2 no-underline"
+                            >
                               View Details
-                            </button>
+                            </Link>
                           </div>
                         </div>
                       </div>
