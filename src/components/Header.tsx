@@ -15,20 +15,17 @@ export function Header() {
           </div>
           
           <nav className="hidden md:flex items-center space-x-1">
-            <Link href="/" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
-              Explore
-            </Link>
             <Link href="/marketplace" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
               Marketplace
             </Link>
             <Link href="/mint" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
               Create
             </Link>
-            <Link href="/my-nfts" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
-              My NFTs
-            </Link>
             <Link href="/consume" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
               Consume
+            </Link>
+            <Link href="/my-nfts" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
+              My Events
             </Link>
           </nav>
           

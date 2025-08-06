@@ -161,7 +161,7 @@ export default function MyNFTsPage() {
         <Header />
         <div className="max-w-2xl mx-auto pt-16 px-6">
           <div className="text-center space-y-4">
-            <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">My NFTs</h1>
+            <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">My Events</h1>
             <p className="text-[var(--on-surface-variant)]">Please connect your wallet to view your NFTs</p>
           </div>
         </div>
@@ -175,7 +175,7 @@ export default function MyNFTsPage() {
       
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
         <div className="mb-12 space-y-2">
-          <h1 className="text-4xl font-bold text-[var(--on-surface)]">My NFTs</h1>
+          <h1 className="text-4xl font-bold text-[var(--on-surface)]">My Events</h1>
           <p className="text-[var(--on-surface-variant)] text-lg">
             Manage your digital collectibles and list them for sale
           </p>

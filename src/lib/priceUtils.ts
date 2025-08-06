@@ -107,7 +107,22 @@ export function formatEth(amount: number | string): string {
  */
 export function weiToEth(wei: string | bigint): number {
   const weiAmount = typeof wei === 'string' ? BigInt(wei) : wei
-  return Number(weiAmount) / 1e18
+  
+  // Handle zero case
+  if (weiAmount === 0n) {
+    return 0
+  }
+  
+  // Convert using BigInt arithmetic to preserve precision
+  // Split into integer and fractional parts to avoid precision loss
+  const weiPerEth = BigInt('1000000000000000000') // 1e18
+  const ethInteger = weiAmount / weiPerEth
+  const weiRemainder = weiAmount % weiPerEth
+  
+  // Convert to decimal
+  const ethDecimal = Number(ethInteger) + Number(weiRemainder) / 1e18
+  
+  return ethDecimal
 }
 
 /**
