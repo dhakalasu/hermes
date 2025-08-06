@@ -45,6 +45,7 @@ export default function MarketplacePage() {
   const { address, isConnected } = useAccount()
   const [sales, setSales] = useState<{ saleId: number; sale: Sale; nftData: NFTData }[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState(Date.now())
   const [selectedTokenId, setSelectedTokenId] = useState<string>('')
   const [listPriceUsd, setListPriceUsd] = useState<string>('')
   const [buyNowPriceUsd, setBuyNowPriceUsd] = useState<string>('')
@@ -105,6 +106,21 @@ export default function MarketplacePage() {
   useEffect(() => {
     fetchSales()
   }, [])
+
+  // Real-time timer updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now())
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Filter out expired sales
+  const activeSales = sales.filter(({ sale }) => {
+    const endTimeMs = Number(BigInt(sale.endTime)) * 1000
+    return endTimeMs > currentTime
+  })
 
   useEffect(() => {
     if (isConnected && address) {
@@ -204,15 +220,26 @@ export default function MarketplacePage() {
   const formatTimeLeft = (endTime: bigint | string) => {
     const time = typeof endTime === 'string' ? BigInt(endTime) : endTime
     const endTimeMs = Number(time) * 1000
-    const timeLeft = Math.max(0, endTimeMs - Date.now())
-    const hours = Math.floor(timeLeft / (1000 * 60 * 60))
-    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const timeLeft = Math.max(0, endTimeMs - currentTime)
     
-    if (hours > 24) {
-      const days = Math.floor(hours / 24)
-      return `${days}d ${hours % 24}h`
+    if (timeLeft === 0) {
+      return 'Expired'
     }
-    return `${hours}h ${minutes}m`
+    
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000)
+    
+    if (days > 0) {
+      return `${days}d ${hours}h`
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`
+    } else {
+      return `${seconds}s`
+    }
   }
 
   if (!isConnected) {
@@ -314,6 +341,7 @@ export default function MarketplacePage() {
                     onChange={(e) => setDuration(e.target.value)}
                     className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
                   >
+                    <option value="60">1 minute</option>
                     <option value="3600">1 hour</option>
                     <option value="86400">24 hours</option>
                     <option value="259200">3 days</option>
@@ -403,13 +431,13 @@ export default function MarketplacePage() {
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--surface-variant)] border-t-[var(--primary)]"></div>
             </div>
-          ) : sales.length === 0 ? (
+          ) : activeSales.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-[var(--on-surface-variant)]">No active sales found</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sales.map(({ saleId, sale, nftData }) => {
+              {activeSales.map(({ saleId, sale, nftData }) => {
                 try {
                   return (
                     <div key={saleId} className="card">
