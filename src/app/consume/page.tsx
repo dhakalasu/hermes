@@ -38,7 +38,7 @@ export default function ConsumePage() {
 
   useEffect(() => {
     if (isConnected && address) {
-      fetchOriginalOwnerNFTs()
+      fetchUserNFTs()
     } else {
       setLoading(false)
     }
@@ -47,23 +47,23 @@ export default function ConsumePage() {
   useEffect(() => {
     if (isSuccess) {
       // Refresh NFTs after successful consumption
-      fetchOriginalOwnerNFTs()
+      fetchUserNFTs()
       setConsumingNFT(null)
     }
   }, [isSuccess])
 
-  const fetchOriginalOwnerNFTs = async () => {
+  const fetchUserNFTs = async () => {
     if (!address) return
     
     try {
       setLoading(true)
-      const response = await fetch(`/api/users/${address}/original-nfts`)
+      const response = await fetch(`/api/users/${address}/nfts`)
       if (response.ok) {
         const data = await response.json()
         setNfts(data.nfts || [])
       }
     } catch (error) {
-      console.error('Error fetching original owner NFTs:', error)
+      console.error('Error fetching user NFTs:', error)
     } finally {
       setLoading(false)
     }
@@ -86,9 +86,36 @@ export default function ConsumePage() {
       }
     }
 
+    // Find the NFT to check if user is original owner
+    const nft = nfts.find(n => n.tokenId === tokenId)
+    if (!nft) {
+      alert('NFT not found')
+      return
+    }
+
+    // Check if user is the current owner
+    if (nft.owner.toLowerCase() !== address.toLowerCase()) {
+      alert('You can only consume NFTs that you currently own')
+      return
+    }
+
+    // Check if NFT is already consumed
+    if (nft.consumed) {
+      alert('This NFT has already been consumed')
+      return
+    }
+
     setConsumingNFT(tokenId)
     
     try {
+      console.log('Attempting to consume NFT:', {
+        contractAddress: CONTRACT_ADDRESSES[baseSepolia.id].nft,
+        tokenId,
+        userAddress: address,
+        nftOwner: nft.owner,
+        isOwner: nft.owner.toLowerCase() === address.toLowerCase()
+      })
+
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
         abi: NFT_ABI,
@@ -98,7 +125,7 @@ export default function ConsumePage() {
     } catch (error) {
       console.error('Error consuming NFT:', error)
       setConsumingNFT(null)
-      alert('Failed to consume NFT')
+      alert(`Failed to consume NFT: ${error.message || 'Unknown error'}`)
     }
   }
 
@@ -143,7 +170,7 @@ export default function ConsumePage() {
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl font-bold text-[var(--on-surface)]">Consume NFTs</h1>
           <p className="text-[var(--on-surface-variant)] text-lg">
-            Mark your event tickets as used. You can only consume NFTs where you are the original creator.
+            Mark your event tickets as used. You can only consume NFTs that you currently own.
           </p>
         </div>
 
@@ -298,9 +325,9 @@ export default function ConsumePage() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Current Owner</span>
+                      <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Created By</span>
                       <div className="font-mono mt-0.5">
-                        <AddressLink address={nft.owner} className="text-xs" />
+                        <AddressLink address={nft.creator} className="text-xs" />
                       </div>
                     </div>
                   </div>

@@ -91,6 +91,7 @@ export default function NFTDetailPage() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   })
+  const { convertUsdToEth } = useUsdConversion()
 
   useEffect(() => {
     if (tokenId) {
@@ -141,12 +142,16 @@ export default function NFTDetailPage() {
     if (!nft?.sale || !isConnected) return
 
     try {
+      // Convert USD price to ETH
+      const buyNowPriceUsd = Number(BigInt(nft.sale.buyNowPrice)) / 100000000 // Convert from 8 decimal USD to regular USD
+      const ethAmount = await convertUsdToEth(buyNowPriceUsd)
+      
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`,
         abi: MARKETPLACE_ABI,
         functionName: 'buyNow',
         args: [BigInt(nft.sale.id)],
-        value: BigInt(nft.sale.buyNowPrice),
+        value: ethAmount, // Send ETH equivalent
       })
     } catch (error) {
       console.error('Error buying NFT:', error)
@@ -260,11 +265,6 @@ export default function NFTDetailPage() {
   const isOnSale = nft.sale && nft.sale.active
   const timeLeft = isOnSale && nft.sale ? Math.max(0, nft.sale.endTime * 1000 - currentTime) : 0
 
-  // Debug logging
-  console.log('NFT Data:', nft)
-  console.log('Sale Data:', nft.sale)
-  console.log('Is On Sale:', isOnSale)
-  console.log('Is Owner:', isOwner)
 
   return (
     <div className="min-h-screen bg-[var(--surface)]">
@@ -326,16 +326,6 @@ export default function NFTDetailPage() {
               </div>
             )}
 
-            {/* Debug Info */}
-            <div className="p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)]">
-              <h3 className="font-semibold text-[var(--warning)] mb-2">Debug Info</h3>
-              <p className="text-[var(--on-surface-variant)] text-sm">
-                Sale Data: {nft.sale ? 'Present' : 'Not found'}<br/>
-                Is On Sale: {isOnSale ? 'Yes' : 'No'}<br/>
-                Sale Active: {nft.sale?.active ? 'Yes' : 'No'}<br/>
-                Is Owner: {isOwner ? 'Yes' : 'No'}
-              </p>
-            </div>
           </div>
         </div>
 
