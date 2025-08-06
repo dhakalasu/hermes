@@ -49,6 +49,7 @@ export default function MarketplacePage() {
   const [sales, setSales] = useState<{ saleId: number; sale: Sale; nftData: NFTData }[]>([])
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(Date.now())
+  const [selectedEventType, setSelectedEventType] = useState<string>('all')
   const [selectedTokenId, setSelectedTokenId] = useState<string>('')
   const [listPriceUsd, setListPriceUsd] = useState<string>('')
   const [buyNowPriceUsd, setBuyNowPriceUsd] = useState<string>('')
@@ -119,11 +120,41 @@ export default function MarketplacePage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Filter out expired sales
-  const activeSales = sales.filter(({ sale }) => {
+  // Filter out expired sales and apply event type filter
+  const activeSales = sales.filter(({ sale, nftData }) => {
     const endTimeMs = Number(BigInt(sale.endTime)) * 1000
-    return endTimeMs > currentTime
+    const isNotExpired = endTimeMs > currentTime
+    
+    if (selectedEventType === 'all') {
+      return isNotExpired
+    }
+    
+    return isNotExpired && nftData.eventType === selectedEventType
   })
+  
+  // Event type options with counts
+  const eventTypeFilters = [
+    { value: 'all', label: 'All Events', count: sales.filter(({ sale }) => {
+      const endTimeMs = Number(BigInt(sale.endTime)) * 1000
+      return endTimeMs > currentTime
+    }).length },
+    { value: 'food', label: 'Food & Dining', count: sales.filter(({ sale, nftData }) => {
+      const endTimeMs = Number(BigInt(sale.endTime)) * 1000
+      return endTimeMs > currentTime && nftData.eventType === 'food'
+    }).length },
+    { value: 'sports', label: 'Sports', count: sales.filter(({ sale, nftData }) => {
+      const endTimeMs = Number(BigInt(sale.endTime)) * 1000
+      return endTimeMs > currentTime && nftData.eventType === 'sports'
+    }).length },
+    { value: 'events', label: 'Events & Entertainment', count: sales.filter(({ sale, nftData }) => {
+      const endTimeMs = Number(BigInt(sale.endTime)) * 1000
+      return endTimeMs > currentTime && nftData.eventType === 'events'
+    }).length },
+    { value: 'other', label: 'Other', count: sales.filter(({ sale, nftData }) => {
+      const endTimeMs = Number(BigInt(sale.endTime)) * 1000
+      return endTimeMs > currentTime && nftData.eventType === 'other'
+    }).length }
+  ]
 
   useEffect(() => {
     if (isConnected && address) {
@@ -428,7 +459,35 @@ export default function MarketplacePage() {
 
         {/* Active Sales */}
         <div>
-          <h2 className="text-2xl font-bold text-[var(--on-surface)] mb-6">Active Sales</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <h2 className="text-2xl font-bold text-[var(--on-surface)] mb-4 sm:mb-0">Active Sales</h2>
+            
+            {/* Event Type Filters */}
+            <div className="flex flex-wrap gap-2">
+              {eventTypeFilters.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setSelectedEventType(filter.value)}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                    selectedEventType === filter.value
+                      ? 'bg-[var(--primary)] text-white shadow-md'
+                      : 'bg-[var(--surface-variant)] text-[var(--on-surface-variant)] hover:bg-[var(--primary)]/10 hover:text-[var(--primary)]'
+                  }`}
+                >
+                  {filter.label}
+                  {filter.count > 0 && (
+                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                      selectedEventType === filter.value
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[var(--primary)]/10 text-[var(--primary)]'
+                    }`}>
+                      {filter.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
           
           {loading ? (
             <div className="flex justify-center py-12">
@@ -436,7 +495,20 @@ export default function MarketplacePage() {
             </div>
           ) : activeSales.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-[var(--on-surface-variant)]">No active sales found</p>
+              <p className="text-[var(--on-surface-variant)]">
+                {selectedEventType === 'all' 
+                  ? 'No active sales found' 
+                  : `No active ${eventTypeFilters.find(f => f.value === selectedEventType)?.label.toLowerCase()} sales found`
+                }
+              </p>
+              {selectedEventType !== 'all' && (
+                <button
+                  onClick={() => setSelectedEventType('all')}
+                  className="mt-2 text-[var(--primary)] hover:underline"
+                >
+                  View all sales
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

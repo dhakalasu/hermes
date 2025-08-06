@@ -55,6 +55,7 @@ export default function MyNFTsPage() {
   const [claimableAuctions, setClaimableAuctions] = useState<ClaimableAuction[]>([])
   const [loadingClaimable, setLoadingClaimable] = useState(true)
   const [claimingAuction, setClaimingAuction] = useState<number | null>(null)
+  const [selectedEventType, setSelectedEventType] = useState<string>('all')
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -276,11 +277,47 @@ export default function MyNFTsPage() {
         )}
 
         {/* Owned NFTs Section */}
-        <div className="mb-8 space-y-2">
-          <h2 className="text-2xl font-bold text-[var(--on-surface)]">Owned NFTs</h2>
-          <p className="text-[var(--on-surface-variant)]">
-            NFTs you currently own and can list for sale
-          </p>
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div className="mb-4 sm:mb-0">
+              <h2 className="text-2xl font-bold text-[var(--on-surface)]">Owned NFTs</h2>
+              <p className="text-[var(--on-surface-variant)]">
+                NFTs you currently own and can list for sale
+              </p>
+            </div>
+            
+            {/* Event Type Filters */}
+            {nfts.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'all', label: 'All', count: nfts.length },
+                  { value: 'food', label: 'Food', count: nfts.filter(nft => nft.eventType === 'food').length },
+                  { value: 'sports', label: 'Sports', count: nfts.filter(nft => nft.eventType === 'sports').length },
+                  { value: 'events', label: 'Events', count: nfts.filter(nft => nft.eventType === 'events').length },
+                  { value: 'other', label: 'Other', count: nfts.filter(nft => nft.eventType === 'other').length }
+                ].filter(filter => filter.count > 0).map((filter) => (
+                  <button
+                    key={filter.value}
+                    onClick={() => setSelectedEventType(filter.value)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      selectedEventType === filter.value
+                        ? 'bg-[var(--primary)] text-white shadow-md'
+                        : 'bg-[var(--surface-variant)] text-[var(--on-surface-variant)] hover:bg-[var(--primary)]/10 hover:text-[var(--primary)]'
+                    }`}
+                  >
+                    {filter.label}
+                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                      selectedEventType === filter.value
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[var(--primary)]/10 text-[var(--primary)]'
+                    }`}>
+                      {filter.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -336,9 +373,12 @@ export default function MyNFTsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {nfts.map((nft) => (
-              <NFTCard key={nft.id} nft={nft} />
-            ))}
+            {nfts
+              .filter(nft => selectedEventType === 'all' || nft.eventType === selectedEventType)
+              .map((nft) => (
+                <NFTCard key={nft.id} nft={nft} />
+              ))
+            }
           </div>
         )}
       </main>
