@@ -27,6 +27,9 @@ export function Header() {
             <Link href="/my-nfts" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
               My NFTs
             </Link>
+            <Link href="/consume" className="text-[var(--on-surface)] hover:text-[var(--primary)] hover:bg-[var(--surface-container)] px-4 py-2 text-sm font-medium rounded-[var(--radius-sm)] transition-all duration-200">
+              Consume
+            </Link>
           </nav>
           
           <ConnectWalletButton />
