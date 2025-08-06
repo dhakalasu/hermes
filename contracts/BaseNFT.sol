@@ -74,8 +74,8 @@ contract BaseNFT is ERC721, Ownable, ReentrancyGuard {
         require(_exists(tokenId), "Token does not exist");
         require(!nftData[tokenId].consumed, "Token already consumed");
         require(
-            msg.sender == ownerOf(tokenId),
-            "Only current owner can consume this NFT"
+            msg.sender == nftData[tokenId].originalOwner,
+            "Only original creator can consume this NFT"
         );
         
         nftData[tokenId].consumed = true;

@@ -12,36 +12,11 @@ import { UsdInputWithLabel } from '@/components/UsdInput'
 import { useUsdConversion } from '@/hooks/useUsdConversion'
 import { AddressLink } from '@/components/AddressLink'
 import { baseSepolia } from 'viem/chains'
+import MARKETPLACE_ABI_FILE from '@/lib/Marketplace.json'
+import BASE_NFT_ABI_FILE from '@/lib/BaseNFT.json'
 
-const MARKETPLACE_ABI = [
-  {
-    "inputs": [
-      { "internalType": "address", "name": "nftContract", "type": "address" },
-      { "internalType": "uint256", "name": "tokenId", "type": "uint256" },
-      { "internalType": "uint256", "name": "startingPrice", "type": "uint256" },
-      { "internalType": "uint256", "name": "buyNowPrice", "type": "uint256" },
-      { "internalType": "uint256", "name": "duration", "type": "uint256" }
-    ],
-    "name": "listNFT",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "saleId", "type": "uint256" }],
-    "name": "placeBid",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "saleId", "type": "uint256" }],
-    "name": "buyNow",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  }
-]
+const MARKETPLACE_ABI = MARKETPLACE_ABI_FILE.abi
+const BASE_NFT_ABI = BASE_NFT_ABI_FILE.abi
 
 interface NFTData {
   id: string
@@ -79,6 +54,8 @@ export default function NFTDetailPage() {
   const [bidAmountUsd, setBidAmountUsd] = useState('')
   const [bidAmountEth, setBidAmountEth] = useState('')
   const [isListing, setIsListing] = useState(false)
+  const [needsApproval, setNeedsApproval] = useState(false)
+  const [checkingApproval, setCheckingApproval] = useState(false)
   const [listingData, setListingData] = useState({
     startingPriceUsd: '',
     startingPriceEth: '',
@@ -93,11 +70,73 @@ export default function NFTDetailPage() {
   })
   const { convertUsdToEth } = useUsdConversion()
 
+  // Calculate if user is owner
+  const isOwner = isConnected && address && nft && address?.toLowerCase() === nft.owner.toLowerCase()
+
   useEffect(() => {
     if (tokenId) {
       fetchNFT()
     }
   }, [tokenId])
+
+  useEffect(() => {
+    if (isOwner) {
+      checkApproval()
+    }
+  }, [isOwner])
+
+  useEffect(() => {
+    if (isSuccess) {
+      // Refresh NFT data and check approval status after successful transaction
+      fetchNFT()
+      if (isOwner) {
+        checkApproval()
+      }
+    }
+  }, [isSuccess, isOwner])
+
+  const checkApproval = async () => {
+    if (!address || !nft) {
+      console.log('checkApproval: Missing address or nft', { address, nft })
+      return
+    }
+    
+    console.log('Checking approval for NFT:', tokenId, 'owner:', address, 'marketplace:', CONTRACT_ADDRESSES[baseSepolia.id].marketplace)
+    setCheckingApproval(true)
+    try {
+      // Check if marketplace is approved to transfer this NFT
+      const response = await fetch(`/api/nfts/${tokenId}/approval-status?owner=${address}&marketplace=${CONTRACT_ADDRESSES[baseSepolia.id].marketplace}`)
+      console.log('Approval check response:', response.status)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Approval data:', data)
+        setNeedsApproval(!data.isApproved)
+      } else {
+        console.error('Approval check failed with status:', response.status)
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+      }
+    } catch (error) {
+      console.error('Error checking approval:', error)
+    } finally {
+      setCheckingApproval(false)
+    }
+  }
+
+  const handleApprove = async () => {
+    if (!isConnected || !address) return
+
+    try {
+      writeContract({
+        address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
+        abi: BASE_NFT_ABI,
+        functionName: 'approve',
+        args: [CONTRACT_ADDRESSES[baseSepolia.id].marketplace, BigInt(tokenId)],
+      })
+    } catch (error) {
+      console.error('Error approving marketplace:', error)
+    }
+  }
 
   // Real-time timer updates
   useEffect(() => {
@@ -159,18 +198,39 @@ export default function NFTDetailPage() {
   }
 
   const handleListNFT = async () => {
-    if (!listingData.startingPriceEth || !listingData.buyNowPriceEth || !isConnected) return
+    console.log('handleListNFT called', { 
+      startingPriceUsd: listingData.startingPriceUsd, 
+      buyNowPriceUsd: listingData.buyNowPriceUsd, 
+      isConnected,
+      tokenId 
+    })
+    
+    if (!listingData.startingPriceUsd || !listingData.buyNowPriceUsd || !isConnected) {
+      console.log('Missing required data for listing')
+      return
+    }
 
     try {
+      // Convert USD prices to 8-decimal format (contract expects USD with 8 decimals)
+      const startingPriceUsdFormatted = BigInt(Math.round(parseFloat(listingData.startingPriceUsd) * 100000000))
+      const buyNowPriceUsdFormatted = BigInt(Math.round(parseFloat(listingData.buyNowPriceUsd) * 100000000))
+      
+      console.log('Calling writeContract with args:', {
+        address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace,
+        tokenId: BigInt(tokenId),
+        startingPriceUsdFormatted: startingPriceUsdFormatted.toString(),
+        buyNowPriceUsdFormatted: buyNowPriceUsdFormatted.toString(),
+        duration: BigInt(parseInt(listingData.duration) * 3600).toString()
+      })
+      
       writeContract({
         address: CONTRACT_ADDRESSES[baseSepolia.id].marketplace as `0x${string}`,
         abi: MARKETPLACE_ABI,
         functionName: 'listNFT',
         args: [
-          CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
           BigInt(tokenId),
-          parseEther(listingData.startingPriceEth),
-          parseEther(listingData.buyNowPriceEth),
+          startingPriceUsdFormatted,
+          buyNowPriceUsdFormatted,
           BigInt(parseInt(listingData.duration) * 3600), // Convert hours to seconds
         ],
       })
@@ -261,7 +321,6 @@ export default function NFTDetailPage() {
     )
   }
 
-  const isOwner = isConnected && address?.toLowerCase() === nft.owner.toLowerCase()
   const isOnSale = nft.sale && nft.sale.active
   const timeLeft = isOnSale && nft.sale ? Math.max(0, nft.sale.endTime * 1000 - currentTime) : 0
 
@@ -405,41 +464,64 @@ export default function NFTDetailPage() {
             <div className="card">
               <h3 className="text-xl font-semibold mb-6 text-[var(--on-surface)]">List for Sale</h3>
               
-              <div className="space-y-6">
-                <UsdInputWithLabel
-                  label="Starting Price"
-                  value={listingData.startingPriceUsd}
-                  onChange={handleStartingPriceChange}
-                  placeholder="Enter starting price in USD"
-                />
-                <UsdInputWithLabel
-                  label="Buy Now Price"
-                  value={listingData.buyNowPriceUsd}
-                  onChange={handleBuyNowPriceChange}
-                  placeholder="Enter buy now price in USD"
-                />
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
-                    Duration (hours)
-                  </label>
-                  <select
-                    value={listingData.duration}
-                    onChange={(e) => setListingData({...listingData, duration: e.target.value})}
-                    className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
-                  >
-                    <option value="24">24 hours</option>
-                    <option value="72">3 days</option>
-                    <option value="168">7 days</option>
-                  </select>
+              {checkingApproval ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--primary)] border-t-transparent mx-auto"></div>
+                  <p className="text-[var(--on-surface-variant)] mt-2">Checking approval status...</p>
                 </div>
-                <button
-                  onClick={handleListNFT}
-                  disabled={isPending || isConfirming || !listingData.startingPriceEth || !listingData.buyNowPriceEth}
-                  className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPending ? 'Confirming...' : isConfirming ? 'Processing...' : 'List NFT'}
-                </button>
-              </div>
+              ) : needsApproval ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)]">
+                    <h4 className="font-semibold text-[var(--warning)] mb-2">Approval Required</h4>
+                    <p className="text-[var(--on-surface-variant)] text-sm mb-4">
+                      You need to approve the marketplace to transfer this NFT before listing it for sale.
+                    </p>
+                    <button
+                      onClick={handleApprove}
+                      disabled={isPending || isConfirming}
+                      className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isPending ? 'Confirming...' : isConfirming ? 'Processing...' : 'Approve Marketplace'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <UsdInputWithLabel
+                    label="Starting Price"
+                    value={listingData.startingPriceUsd}
+                    onChange={handleStartingPriceChange}
+                    placeholder="Enter starting price in USD"
+                  />
+                  <UsdInputWithLabel
+                    label="Buy Now Price"
+                    value={listingData.buyNowPriceUsd}
+                    onChange={handleBuyNowPriceChange}
+                    placeholder="Enter buy now price in USD"
+                  />
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--on-surface)] mb-2">
+                      Duration (hours)
+                    </label>
+                    <select
+                      value={listingData.duration}
+                      onChange={(e) => setListingData({...listingData, duration: e.target.value})}
+                      className="block w-full px-4 py-3 border border-[var(--surface-variant)] bg-[var(--surface)] rounded-[var(--radius-sm)] text-[var(--on-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-colors"
+                    >
+                      <option value="24">24 hours</option>
+                      <option value="72">3 days</option>
+                      <option value="168">7 days</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleListNFT}
+                    disabled={isPending || isConfirming || !listingData.startingPriceUsd || !listingData.buyNowPriceUsd}
+                    className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPending ? 'Confirming...' : isConfirming ? 'Processing...' : 'List NFT'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

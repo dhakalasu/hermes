@@ -7,7 +7,9 @@ import { NFTCard } from '@/components/NFTCard'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
 import { AddressLink } from '@/components/AddressLink'
-import MARKETPLACE_ABI from '@/lib/Marketplace.json'
+import MARKETPLACE_ABI_FILE from '@/lib/Marketplace.json'
+
+const MARKETPLACE_ABI = MARKETPLACE_ABI_FILE.abi
 
 interface NFT {
   id: string
@@ -56,6 +58,7 @@ export default function MyNFTsPage() {
   const [loadingClaimable, setLoadingClaimable] = useState(true)
   const [claimingAuction, setClaimingAuction] = useState<number | null>(null)
   const [selectedEventType, setSelectedEventType] = useState<string>('all')
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now())
 
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -79,14 +82,46 @@ export default function MyNFTsPage() {
       fetchMyNFTs()
       fetchClaimableAuctions()
       setClaimingAuction(null)
+      setLastRefresh(Date.now())
     }
   }, [isSuccess])
+
+  // Periodic refresh every 30 seconds to detect external changes (like auction wins)
+  useEffect(() => {
+    if (!isConnected || !address) return
+
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing My NFTs data...')
+      fetchMyNFTs()
+      fetchClaimableAuctions()
+      setLastRefresh(Date.now())
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(refreshInterval)
+  }, [isConnected, address])
+
+  // Refresh when page becomes visible (user switches back to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isConnected && address) {
+        console.log('Page became visible, refreshing My NFTs data...')
+        fetchMyNFTs()
+        fetchClaimableAuctions()
+        setLastRefresh(Date.now())
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isConnected, address])
 
   const fetchMyNFTs = async () => {
     if (!address) return
     
     try {
-      const response = await fetch(`/api/users/${address}/nfts`)
+      const response = await fetch(`/api/users/${address}/nfts`, {
+        cache: 'no-store' // Always fetch fresh data
+      })
       if (response.ok) {
         const data = await response.json()
         setNfts(data.nfts || [])
@@ -102,7 +137,9 @@ export default function MyNFTsPage() {
     if (!address) return
     
     try {
-      const response = await fetch(`/api/marketplace/claimable/${address}`)
+      const response = await fetch(`/api/marketplace/claimable/${address}`, {
+        cache: 'no-store' // Always fetch fresh data
+      })
       if (response.ok) {
         const data = await response.json()
         setClaimableAuctions(data.claimableAuctions || [])
@@ -174,11 +211,30 @@ export default function MyNFTsPage() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <div className="mb-12 space-y-2">
-          <h1 className="text-4xl font-bold text-[var(--on-surface)]">My Events</h1>
-          <p className="text-[var(--on-surface-variant)] text-lg">
-            Manage your digital collectibles and list them for sale
-          </p>
+        <div className="mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div className="space-y-2 mb-4 sm:mb-0">
+              <h1 className="text-4xl font-bold text-[var(--on-surface)]">My Events</h1>
+              <p className="text-[var(--on-surface-variant)] text-lg">
+                Manage your digital collectibles and list them for sale
+              </p>
+            </div>
+            <div className="flex flex-col sm:items-end space-y-2">
+              <button
+                onClick={() => {
+                  fetchMyNFTs()
+                  fetchClaimableAuctions()
+                  setLastRefresh(Date.now())
+                }}
+                className="btn-secondary px-4 py-2 text-sm"
+              >
+                Refresh
+              </button>
+              <p className="text-xs text-[var(--on-surface-variant)]">
+                Last updated: {new Date(lastRefresh).toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Claimable Auctions Section */}

@@ -34,7 +34,9 @@ const NFT_ABI = [
   }
 ] as const
 
-import MARKETPLACE_ABI from '@/lib/Marketplace.json'
+import MARKETPLACE_ABI_FILE from '@/lib/Marketplace.json'
+
+const MARKETPLACE_ABI = MARKETPLACE_ABI_FILE.abi
 
 export async function GET(
   request: NextRequest,

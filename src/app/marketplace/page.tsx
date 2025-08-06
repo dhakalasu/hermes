@@ -7,8 +7,11 @@ import { Header } from '@/components/Header'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
 import { AddressLink } from '@/components/AddressLink'
-import MARKETPLACE_ABI from '@/lib/Marketplace.json'
-import NFT_ABI from '@/lib/BaseNFT.json'
+import MARKETPLACE_ABI_FILE from '@/lib/Marketplace.json'
+import NFT_ABI_FILE from '@/lib/BaseNFT.json'
+
+const MARKETPLACE_ABI = MARKETPLACE_ABI_FILE.abi
+const NFT_ABI = NFT_ABI_FILE.abi
 
 interface Sale {
   seller: string
@@ -57,6 +60,7 @@ export default function MarketplacePage() {
   const [duration, setDuration] = useState<string>('86400') // 24 hours default
   const [isApproving, setIsApproving] = useState(false)
   const [needsApproval, setNeedsApproval] = useState(false)
+  const [checkingApproval, setCheckingApproval] = useState(false)
   const [userNFTs, setUserNFTs] = useState<UserNFT[]>([])
   const [loadingUserNFTs, setLoadingUserNFTs] = useState(false)
 
@@ -65,27 +69,43 @@ export default function MarketplacePage() {
     hash,
   })
 
-  // Check if marketplace is approved for the selected token
-  const { data: approvedAddress } = useReadContract({
-    address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
-    abi: NFT_ABI,
-    functionName: 'getApproved',
-    args: selectedTokenId ? [BigInt(selectedTokenId)] : undefined,
-    query: {
-      enabled: !!selectedTokenId,
-    },
-  })
-
+  // Check approval when token is selected
   useEffect(() => {
-    if (selectedTokenId && approvedAddress !== undefined) {
-      const marketplaceAddress = CONTRACT_ADDRESSES[baseSepolia.id].marketplace.toLowerCase()
-      const approved = (approvedAddress as string).toLowerCase()
-      setNeedsApproval(approved !== marketplaceAddress)
+    if (selectedTokenId && address) {
+      checkApproval()
+    } else {
+      setNeedsApproval(false)
     }
-  }, [selectedTokenId, approvedAddress])
+  }, [selectedTokenId, address])
+
+  const checkApproval = async () => {
+    if (!address || !selectedTokenId) {
+      return
+    }
+    
+    setCheckingApproval(true)
+    try {
+      // Check if marketplace is approved to transfer this NFT
+      const response = await fetch(`/api/nfts/${selectedTokenId}/approval-status?owner=${address}&marketplace=${CONTRACT_ADDRESSES[baseSepolia.id].marketplace}`)
+      if (response.ok) {
+        const data = await response.json()
+        setNeedsApproval(!data.isApproved)
+      } else {
+        console.error('Approval check failed with status:', response.status)
+        // Default to needs approval on error
+        setNeedsApproval(true)
+      }
+    } catch (error) {
+      console.error('Error checking approval:', error)
+      // Default to needs approval on error
+      setNeedsApproval(true)
+    } finally {
+      setCheckingApproval(false)
+    }
+  }
 
   // Read user's NFT balance for listing
-  const { data: userNFTBalance, refetch: refetchUserNFTs } = useReadContract({
+  const { data: userNFTBalance } = useReadContract({
     address: CONTRACT_ADDRESSES[baseSepolia.id].nft as `0x${string}`,
     abi: NFT_ABI,
     functionName: 'balanceOf',
@@ -97,7 +117,6 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     if (isSuccess) {
-      refetchUserNFTs()
       fetchUserNFTs()
       fetchSales() // Refresh sales to show newly listed NFT
       setSelectedTokenId('')
@@ -105,6 +124,7 @@ export default function MarketplacePage() {
       setBuyNowPriceUsd('')
       setIsApproving(false)
       setNeedsApproval(false)
+      setCheckingApproval(false)
     }
   }, [isSuccess])
 
@@ -215,6 +235,16 @@ export default function MarketplacePage() {
       setIsApproving(false)
     }
   }
+
+  // Re-check approval after transaction success
+  useEffect(() => {
+    if (isSuccess && selectedTokenId) {
+      // Small delay to ensure transaction is processed
+      setTimeout(() => {
+        checkApproval()
+      }, 1000)
+    }
+  }, [isSuccess, selectedTokenId])
 
   const handleListNFT = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -415,7 +445,12 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-            {selectedTokenId && needsApproval && (
+            {selectedTokenId && (checkingApproval ? (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--primary)] border-t-transparent mx-auto"></div>
+                <p className="text-[var(--on-surface-variant)] mt-2 text-sm">Checking approval status...</p>
+              </div>
+            ) : needsApproval ? (
               <div className="space-y-3">
                 <div className="bg-[var(--warning)]/10 border border-[var(--warning)]/20 rounded-[var(--radius-md)] p-4">
                   <div className="flex items-center space-x-2">
@@ -439,7 +474,7 @@ export default function MarketplacePage() {
                   {isApproving ? 'Approving...' : 'Approve Marketplace'}
                 </button>
               </div>
-            )}
+            ) : null)}
 
               <button
                 type="submit"

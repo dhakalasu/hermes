@@ -6,7 +6,9 @@ import { Header } from '@/components/Header'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { baseSepolia } from 'viem/chains'
 import { AddressLink } from '@/components/AddressLink'
-import NFT_ABI from '@/lib/BaseNFT.json'
+import NFT_ABI_FILE from '@/lib/BaseNFT.json'
+
+const NFT_ABI = NFT_ABI_FILE.abi
 
 interface NFT {
   id: string
@@ -38,7 +40,7 @@ export default function ConsumePage() {
 
   useEffect(() => {
     if (isConnected && address) {
-      fetchUserNFTs()
+      fetchOriginalOwnerNFTs()
     } else {
       setLoading(false)
     }
@@ -47,23 +49,23 @@ export default function ConsumePage() {
   useEffect(() => {
     if (isSuccess) {
       // Refresh NFTs after successful consumption
-      fetchUserNFTs()
+      fetchOriginalOwnerNFTs()
       setConsumingNFT(null)
     }
   }, [isSuccess])
 
-  const fetchUserNFTs = async () => {
+  const fetchOriginalOwnerNFTs = async () => {
     if (!address) return
     
     try {
       setLoading(true)
-      const response = await fetch(`/api/users/${address}/nfts`)
+      const response = await fetch(`/api/users/${address}/original-nfts`)
       if (response.ok) {
         const data = await response.json()
         setNfts(data.nfts || [])
       }
     } catch (error) {
-      console.error('Error fetching user NFTs:', error)
+      console.error('Error fetching original owner NFTs:', error)
     } finally {
       setLoading(false)
     }
@@ -93,9 +95,9 @@ export default function ConsumePage() {
       return
     }
 
-    // Check if user is the current owner
-    if (nft.owner.toLowerCase() !== address.toLowerCase()) {
-      alert('You can only consume NFTs that you currently own')
+    // Check if user is the original creator
+    if (nft.creator.toLowerCase() !== address.toLowerCase()) {
+      alert('You can only consume NFTs that you originally created')
       return
     }
 
@@ -112,8 +114,8 @@ export default function ConsumePage() {
         contractAddress: CONTRACT_ADDRESSES[baseSepolia.id].nft,
         tokenId,
         userAddress: address,
-        nftOwner: nft.owner,
-        isOwner: nft.owner.toLowerCase() === address.toLowerCase()
+        nftCreator: nft.creator,
+        isCreator: nft.creator.toLowerCase() === address.toLowerCase()
       })
 
       writeContract({
@@ -170,7 +172,7 @@ export default function ConsumePage() {
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl font-bold text-[var(--on-surface)]">Consume NFTs</h1>
           <p className="text-[var(--on-surface-variant)] text-lg">
-            Mark your event tickets as used. You can only consume NFTs that you currently own.
+            Scan and mark event tickets as used. As the event organizer, you can consume tickets you created when attendees arrive.
           </p>
         </div>
 
@@ -325,9 +327,9 @@ export default function ConsumePage() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Created By</span>
+                      <span className="text-[var(--on-surface-variant)] uppercase tracking-wide">Current Owner</span>
                       <div className="font-mono mt-0.5">
-                        <AddressLink address={nft.creator} className="text-xs" />
+                        <AddressLink address={nft.owner} className="text-xs" />
                       </div>
                     </div>
                   </div>

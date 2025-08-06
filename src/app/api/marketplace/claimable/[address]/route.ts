@@ -3,8 +3,11 @@ import { createPublicClient, http } from 'viem'
 import { baseSepolia } from 'viem/chains'
 import { CONTRACT_ADDRESSES } from '@/lib/config'
 import { getValidImageUrl } from '@/lib/imageUtils'
-import MARKETPLACE_ABI from '@/lib/Marketplace.json'
-import NFT_ABI from '@/lib/BaseNFT.json'
+import MARKETPLACE_ABI_FILE from '@/lib/Marketplace.json'
+import NFT_ABI_FILE from '@/lib/BaseNFT.json'
+
+const MARKETPLACE_ABI = MARKETPLACE_ABI_FILE.abi
+const NFT_ABI = NFT_ABI_FILE.abi
 
 const client = createPublicClient({
   chain: baseSepolia,
